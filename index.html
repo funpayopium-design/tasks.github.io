@@ -1,566 +1,202 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Бизнес Управление</title>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <style>
-        [v-cloak] { display: none; }
-        .drag-ghost { opacity: 0.2; background: #94a3b8 !important; }
-        
-        .main-gradient {
-            background: linear-gradient(to bottom, #3f3f3f 0%, #ffffff 100%);
-            min-height: calc(100vh - 65px);
-            background-attachment: fixed;
-        }
-
-        .column-box {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            border-radius: 2rem;
-        }
-
-        .task-card {
-            cursor: grab;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid #e2e8f0;
-            border-radius: 1.5rem;
-            background: white;
-        }
-        .task-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-        }
-
-        .no-drag { pointer-events: none; opacity: 0.7; cursor: default !important; }
-        .no-drag .delete-btn { pointer-events: auto; cursor: pointer; }
-        
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
-        
-        .modal-animation {
-            animation: modalFade 0.2s ease;
-        }
-        
-        @keyframes modalFade {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Бизнес Управление</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    :root { --bg: #f4f6f8; --card: #fff; --primary: #2563eb; --border: #e2e8f0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #1e293b; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .kanban { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .col { background: var(--card); padding: 12px; border-radius: 8px; border: 1px solid var(--border); }
+    .col h3 { margin: 0 0 10px; font-size: 14px; text-transform: uppercase; color: #64748b; }
+    .card { background: #f8fafc; padding: 10px; margin-bottom: 8px; border-radius: 6px; border-left: 3px solid var(--primary); }
+    .card h4 { margin: 0 0 4px; }
+    .card p { margin: 0 0 8px; font-size: 13px; color: #475569; }
+    .btn { background: var(--primary); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .btn:hover { opacity: 0.9; }
+    .btn-sm { padding: 4px 8px; font-size: 11px; }
+    .section { margin-top: 24px; background: var(--card); padding: 16px; border-radius: 8px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border); }
+    .input { padding: 6px; border: 1px solid var(--border); border-radius: 4px; width: 100%; box-sizing: border-box; }
+    .user-badge { background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+    .sync-status { font-size: 12px; color: #64748b; margin-left: 10px; }
+  </style>
 </head>
-<body class="font-sans antialiased">
-    <div id="app" v-cloak class="min-h-screen flex flex-col">
-        
-        <header class="bg-[#f3f4f6] border-b border-gray-300 sticky top-0 z-[50] shadow-md h-[65px] flex items-center">
-            <div class="container mx-auto px-6 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <div class="bg-gray-800 p-2 rounded-xl text-white">
-                        <i data-lucide="layout-grid" class="w-5 h-5"></i>
-                    </div>
-                    <span class="text-xl font-black tracking-tighter text-gray-700 uppercase italic">tasks</span>
-                </div>
-                <nav class="hidden md:flex gap-8 font-black text-[10px] uppercase tracking-widest">
-                    <button @click="currentTab = 'tasks'" :class="navClass(currentTab === 'tasks')">Задачи</button>
-                    <button v-if="isAdmin" @click="currentTab = 'projects'" :class="navClass(currentTab === 'projects')">Проекты</button>
-                    <button v-if="isAdmin" @click="currentTab = 'finance'" :class="navClass(currentTab === 'finance')">Финансы</button>
-                    <button v-if="isAdmin" @click="currentTab = 'reports'" :class="navClass(currentTab === 'reports')">Отчеты</button>
-                    <button @click="currentTab = 'admin'" :class="navClass(currentTab === 'admin')" class="text-indigo-600">Админ</button>
-                </nav>
-                <div class="flex items-center gap-3">
-                    <span class="text-xs font-black text-gray-500 uppercase px-3 py-1 bg-white/50 rounded-full">{{ currentUser ? currentUser.name : 'GUEST' }} ({{ currentUser ? currentUser.role : 'USER' }})</span>
-                    <a href="#" class="bg-gray-800 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-black transition flex items-center gap-2">
-                        Поддержка <i data-lucide="external-link" class="w-3 h-3"></i>
-                    </a>
-                </div>
-            </div>
-        </header>
-
-        <main class="main-gradient flex-grow py-10">
-            <div class="container mx-auto px-6">
-                
-                <!-- ЗАДАЧИ -->
-                <div v-if="currentTab === 'tasks'">
-                    <h1 class="text-4xl font-black text-white uppercase italic mb-10 drop-shadow-2xl">Задачи на месяц: Апрель</h1>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
-                        <div v-for="col in ['todo', 'doing', 'done']" :key="col" class="flex flex-col gap-5">
-                            <div class="bg-white/20 backdrop-blur-md p-5 rounded-3xl border border-white/30 shadow-2xl flex justify-between items-center">
-                                <div class="flex items-center gap-3">
-                                    <span class="w-3 h-3 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)]" :class="statusDot(col)"></span>
-                                    <h3 class="text-white text-xs font-black uppercase tracking-widest">
-                                        {{ col === 'todo' ? 'В очереди' : col === 'doing' ? 'В работе' : 'Выполнено' }}
-                                    </h3>
-                                </div>
-                                <button v-if="col === 'todo' && isAdmin" @click="openTaskModal(col)" class="text-white hover:scale-110 transition">
-                                    <i data-lucide="plus-square" class="w-6 h-6"></i>
-                                </button>
-                            </div>
-                            
-                            <div :ref="col + 'Col'" :data-status="col" class="column-box p-5 min-h-[600px] space-y-5">
-                                <div v-for="task in getTasksByStatus(col)" 
-                                     :key="task.id" 
-                                     :data-id="task.id" 
-                                     :class="['task-card p-6 relative group', col === 'done' ? 'no-drag grayscale' : '']">
-                                    
-                                    <button v-if="isAdmin" @click="deleteTask(task.id)" class="delete-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition z-10">
-                                        <i data-lucide="x" class="w-4 h-4"></i>
-                                    </button>
-                                    
-                                    <h4 class="font-black text-gray-800 uppercase text-sm mb-3 tracking-tight pr-6">{{ task.title }}</h4>
-                                    <p class="text-xs text-gray-500 font-medium leading-relaxed mb-4">{{ task.description || 'Нет описания' }}</p>
-                                    <div v-if="col === 'done'" class="flex items-center gap-2 text-[10px] font-black text-green-600 uppercase italic">
-                                        <i data-lucide="check-circle" class="w-3 h-3"></i> Завершено
-                                    </div>
-                                </div>
-                                <div v-if="getTasksByStatus(col).length === 0" class="text-center py-10 text-white/50 text-sm italic">
-                                    Нет задач
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ПРОЕКТЫ -->
-                <div v-if="currentTab === 'projects' && isAdmin">
-                    <div class="flex justify-between items-center mb-12">
-                        <h2 class="text-3xl font-black uppercase italic text-white drop-shadow-xl">Активные проекты</h2>
-                        <button @click="showProjectModal = true" class="bg-white text-gray-900 px-8 py-3 rounded-2xl font-black text-xs uppercase shadow-2xl hover:bg-gray-100 transition">Новый проект</button>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
-                        <div v-for="project in projects" :key="project.id" class="bg-white p-8 rounded-[3rem] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] border border-gray-100 relative group transition-all">
-                            <button @click="deleteProject(project.id)" class="absolute top-8 right-8 text-gray-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
-                            <div class="bg-gray-100 w-16 h-16 rounded-3xl flex items-center justify-center mb-8 text-gray-500 shadow-inner">
-                                <i data-lucide="box" class="w-8 h-8"></i>
-                            </div>
-                            <h3 class="font-black uppercase text-2xl text-gray-800 mb-6 tracking-tighter">{{ project.name }}</h3>
-                            <div class="bg-gray-50 p-6 rounded-[2rem] border border-gray-200 shadow-inner">
-                                <label class="text-[10px] font-black text-gray-400 uppercase block mb-2 tracking-[0.2em] italic">Баланс проекта (₽)</label>
-                                <input type="number" v-model.number="project.balance" class="w-full bg-transparent text-3xl font-mono font-black text-indigo-600 outline-none">
-                            </div>
-                        </div>
-                    </div>
-                    <div v-if="projects.length === 0" class="text-center py-20"><p class="text-white/50 text-lg italic">Нет активных проектов</p></div>
-                </div>
-
-                <!-- ФИНАНСЫ -->
-                <div v-if="currentTab === 'finance' && isAdmin">
-                    <div class="bg-white rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden border border-gray-200">
-                        <div class="p-10 bg-gray-50 border-b flex justify-between items-center">
-                            <h2 class="text-2xl font-black italic uppercase text-gray-800">Финансовый лог</h2>
-                            <div class="text-right">
-                                <span class="text-xs font-black text-gray-400 uppercase tracking-widest italic block mb-2">Общая прибыль</span>
-                                <div :class="totalBalance >= 0 ? 'text-green-600' : 'text-red-600'" class="text-5xl font-mono font-black tracking-tighter italic">{{ totalBalance.toLocaleString() }} ₽</div>
-                            </div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead class="bg-gray-900 text-gray-400 text-[10px] font-black uppercase tracking-widest italic">
-                                    <tr><th class="p-8 text-center w-24">День</th><th class="p-8">Приход (+)</th><th class="p-8">Расход (-)</th><th class="p-8">Комментарий</th></tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 font-bold italic text-sm">
-                                    <tr v-for="day in 31" :key="day" class="hover:bg-gray-50 transition">
-                                        <td class="p-6 bg-gray-50 text-center font-black text-gray-300 border-r border-gray-100">{{ day }}</td>
-                                        <td class="p-6 text-green-600"><input type="number" v-model.number="financeData[day-1].income" class="w-full bg-transparent outline-none focus:bg-white p-2 rounded-xl transition" placeholder="0"></td>
-                                        <td class="p-6 text-red-500"><input type="number" v-model.number="financeData[day-1].expense" class="w-full bg-transparent outline-none focus:bg-white p-2 rounded-xl transition" placeholder="0"></td>
-                                        <td class="p-6"><input type="text" v-model="financeData[day-1].note" class="w-full bg-transparent outline-none text-gray-400" placeholder="..."></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- АДМИН -->
-                <div v-if="currentTab === 'admin'">
-                    <div v-if="!adminAuth" class="max-w-md mx-auto mt-20">
-                        <div class="bg-white p-12 rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] border border-gray-200 text-center">
-                            <h2 class="text-gray-800 font-black uppercase tracking-[0.3em] mb-10 italic">Access Code</h2>
-                            <input type="password" v-model="adminPassInput" @keyup.enter="checkAdminPass" placeholder="••••••••" class="w-full bg-gray-50 border-2 border-gray-100 p-6 rounded-3xl text-center mb-8 outline-none focus:border-indigo-500 transition shadow-inner text-2xl tracking-widest">
-                            <button @click="checkAdminPass" class="w-full bg-gray-900 text-white py-6 rounded-3xl font-black uppercase tracking-widest hover:bg-black transition shadow-2xl">Authorize</button>
-                        </div>
-                    </div>
-                    <div v-else>
-                        <div class="flex justify-between items-center mb-10">
-                            <h2 class="text-3xl font-black uppercase italic text-white drop-shadow-xl">Управление системой</h2>
-                            <button @click="adminAuth = false" class="text-xs font-black text-red-400 uppercase tracking-widest underline decoration-2">Завершить сессию</button>
-                        </div>
-                        <div class="bg-white rounded-[3rem] shadow-2xl border border-gray-200 overflow-hidden mb-8">
-                            <div class="p-8 border-b bg-gray-50/50"><h3 class="font-black uppercase text-sm text-gray-400 tracking-widest">Текущий пользователь</h3></div>
-                            <div class="p-6 flex justify-between items-center">
-                                <div><span class="text-2xl font-black">{{ currentUser.name }}</span><span class="ml-3 px-3 py-1 rounded-full text-xs font-black" :class="currentUser.role === 'ADMIN' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'">{{ currentUser.role }}</span></div>
-                                <button v-if="currentUser.role !== 'ADMIN'" @click="makeAdmin(currentUser.id)" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold">Сделать ADMIN</button>
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-[3rem] shadow-2xl border border-gray-200 overflow-hidden mb-8">
-                            <div class="p-8 border-b bg-gray-50/50"><h3 class="font-black uppercase text-sm text-gray-400 tracking-widest">Переключиться на пользователя</h3></div>
-                            <div class="p-6">
-                                <select v-model="selectedUserId" class="w-full p-4 rounded-2xl border-2 border-gray-200 font-bold outline-none focus:border-indigo-500">
-                                    <option v-for="user in users" :key="user.id" :value="user.id">{{ user.name }} ({{ user.role }})</option>
-                                </select>
-                                <button @click="switchUser" class="mt-4 w-full bg-gray-800 text-white py-3 rounded-xl font-bold text-sm hover:bg-black transition">Переключиться</button>
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-[3rem] shadow-2xl border border-gray-200 overflow-hidden italic">
-                            <div class="p-10 border-b flex justify-between items-center bg-gray-50/50">
-                                <h3 class="font-black uppercase text-sm text-gray-400 tracking-widest">База пользователей</h3>
-                                <button @click="addUser" class="bg-gray-900 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">+ Добавить</button>
-                            </div>
-                            <div class="divide-y divide-gray-100">
-                                <div v-for="user in users" :key="user.id" class="p-8 flex items-center justify-between hover:bg-gray-50 transition">
-                                    <div class="flex items-center gap-6">
-                                        <div class="w-14 h-14 bg-gray-900 text-white rounded-2xl flex items-center justify-center font-black text-xl italic shadow-xl">{{ user.name.charAt(0) }}</div>
-                                        <div><div class="font-black uppercase text-gray-800 tracking-tight">{{ user.name }}</div><div class="text-[10px] text-indigo-500 font-black uppercase tracking-widest">{{ user.role }}</div></div>
-                                    </div>
-                                    <div class="flex gap-3">
-                                        <button v-if="user.role !== 'ADMIN'" @click="makeAdmin(user.id)" class="text-blue-400 hover:text-blue-600 transition text-xs font-bold">Сделать ADMIN</button>
-                                        <button @click="deleteUser(user.id)" class="text-red-200 hover:text-red-500 transition"><i data-lucide="x-circle" class="w-6 h-6"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ОТЧЕТЫ -->
-                <div v-if="currentTab === 'reports' && isAdmin" class="max-w-2xl mx-auto py-10">
-                    <div class="bg-white p-12 rounded-[4rem] shadow-2xl text-center border-t-[15px] border-gray-900">
-                        <div class="w-24 h-24 bg-gray-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 text-gray-300 shadow-inner"><i data-lucide="cloud-download" class="w-12 h-12"></i></div>
-                        <h2 class="text-3xl font-black mb-12 uppercase italic text-gray-800 tracking-tighter">Генерация отчетов</h2>
-                        <div class="space-y-6">
-                            <button @click="downloadReport('tasks')" class="w-full p-8 bg-gray-900 text-white rounded-3xl font-black uppercase text-xs tracking-widest hover:bg-black transition shadow-2xl flex justify-between items-center">Скачать задачи <i data-lucide="download" class="w-5 h-5"></i></button>
-                            <button @click="downloadReport('finance')" class="w-full p-8 bg-white border-2 border-gray-900 rounded-3xl font-black uppercase text-xs tracking-widest hover:bg-gray-50 transition shadow-2xl flex justify-between items-center">Скачать финансы <i data-lucide="download" class="w-5 h-5"></i></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- МОДАЛКА ЗАДАЧ -->
-        <div v-if="showTaskModal" class="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-[200] p-4" @click.self="closeTaskModal">
-            <div class="bg-white w-full max-w-lg rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] overflow-hidden border border-gray-100 modal-animation">
-                <div class="p-10 border-b flex justify-between items-center bg-gray-50/50">
-                    <h3 class="font-black uppercase italic tracking-widest text-gray-400 text-xs">НОВАЯ ЗАПИСЬ</h3>
-                    <button @click="closeTaskModal" class="text-gray-300 hover:text-red-500 transition">
-                        <i data-lucide="x" class="w-6 h-6"></i>
-                    </button>
-                </div>
-                <div class="p-12 space-y-10">
-                    <input type="text" v-model="newTask.title" placeholder="НАЗВАНИЕ" class="w-full border-b-4 border-gray-100 p-4 font-black uppercase outline-none focus:border-indigo-500 transition text-xl bg-transparent">
-                    <textarea v-model="newTask.description" placeholder="ДЕТАЛИ..." class="w-full border-b-4 border-gray-100 p-4 h-40 outline-none focus:border-indigo-500 transition text-sm font-medium bg-transparent"></textarea>
-                    <button @click="saveTask" class="w-full bg-gray-900 text-white py-7 rounded-[2rem] font-black uppercase tracking-[0.2em] hover:bg-black transition shadow-2xl text-sm">CONFIRM AND SAVE</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- МОДАЛКА ПРОЕКТОВ -->
-        <div v-if="showProjectModal" class="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-[200] p-4" @click.self="closeProjectModal">
-            <div class="bg-white w-full max-w-md rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] overflow-hidden border border-gray-100 modal-animation">
-                <div class="p-10 border-b flex justify-between items-center bg-gray-50/50">
-                    <h3 class="font-black uppercase italic tracking-widest text-gray-400 text-xs">PROJECT INITIALIZATION</h3>
-                    <button @click="closeProjectModal" class="text-gray-300 hover:text-red-500 transition">
-                        <i data-lucide="x" class="w-6 h-6"></i>
-                    </button>
-                </div>
-                <div class="p-12 space-y-10">
-                    <input type="text" v-model="newProject.name" placeholder="НАЗВАНИЕ ПРОЕКТА" class="w-full border-b-4 border-gray-100 p-4 font-black uppercase outline-none focus:border-indigo-500 transition text-xl bg-transparent">
-                    <input type="number" v-model.number="newProject.balance" placeholder="НАЧАЛЬНЫЙ БЮДЖЕТ" class="w-full border-b-4 border-gray-100 p-4 font-black uppercase outline-none focus:border-indigo-500 transition text-xl bg-transparent">
-                    <button @click="saveProject" class="w-full bg-gray-900 text-white py-7 rounded-[2rem] font-black uppercase tracking-[0.2em] hover:bg-black transition shadow-2xl text-sm">LAUNCH PROJECT</button>
-                </div>
-            </div>
-        </div>
-
+<body>
+  <div id="app">
+    <div class="header">
+      <h2>📊 Бизнес Управление</h2>
+      <div>
+        <span class="user-badge">{{ currentUser.name }} ({{ currentUser.role }})</span>
+        <span class="sync-status">{{ syncStatus }}</span>
+      </div>
     </div>
 
-    <script>
-        const { createApp, nextTick } = Vue
+    <div class="kanban">
+      <div class="col" v-for="col in ['todo','doing','done']" :key="col">
+        <h3>{{ col === 'todo' ? 'В очереди' : col === 'doing' ? 'В работе' : 'Выполнено' }}</h3>
+        <div class="card" v-for="task in tasksByStatus[col]" :key="task.id">
+          <h4>{{ task.title }}</h4>
+          <p>{{ task.description || 'Нет описания' }}</p>
+          <button class="btn btn-sm" @click="changeStatus(task.id, col === 'done' ? 'todo' : 'done')">
+            {{ col === 'done' ? '↩ Вернуть' : '✅ Завершить' }}
+          </button>
+        </div>
+        <button class="btn" @click="addTask(col)" style="width:100%; margin-top:8px;">+ Новая задача</button>
+      </div>
+    </div>
 
-        // Инициализация IndexedDB
-        let db;
-        const DB_NAME = 'BusinessDB';
-        const DB_VERSION = 1;
-        
-        function initDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-                
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => {
-                    db = request.result;
-                    resolve(db);
-                };
-                
-                request.onupgradeneeded = (event) => {
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains('appData')) {
-                        db.createObjectStore('appData', { keyPath: 'key' });
-                    }
-                };
-            });
-        }
-        
-        function saveToDB(key, data) {
-            if (!db) return;
-            const transaction = db.transaction(['appData'], 'readwrite');
-            const store = transaction.objectStore('appData');
-            store.put({ key, value: data });
-        }
-        
-        async function loadFromDB(key) {
-            if (!db) return null;
-            return new Promise((resolve) => {
-                const transaction = db.transaction(['appData'], 'readonly');
-                const store = transaction.objectStore('appData');
-                const request = store.get(key);
-                request.onsuccess = () => resolve(request.result ? request.result.value : null);
-                request.onerror = () => resolve(null);
-            });
-        }
+    <div class="section">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>📁 Активные проекты</h3>
+        <button class="btn" @click="createProject">Новый проект</button>
+      </div>
+      <table v-if="projects.length">
+        <thead><tr><th>Название</th><th>Баланс (₽)</th><th>Действие</th></tr></thead>
+        <tbody>
+          <tr v-for="p in projects" :key="p.id">
+            <td>{{ p.name }}</td>
+            <td>{{ (p.balance || 0).toLocaleString() }}</td>
+            <td><button class="btn btn-sm" @click="addBalance(p.id)">+ Внести</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else style="color:#64748b;">Нет активных проектов</p>
+    </div>
 
-        createApp({
-            data() {
-                return {
-                    currentTab: 'tasks',
-                    tasks: [],
-                    projects: [],
-                    financeData: [],
-                    users: [],
-                    currentUser: null,
-                    selectedUserId: null,
-                    adminAuth: false,
-                    adminPassInput: '',
-                    correctPass: '01232013',
-                    showTaskModal: false,
-                    showProjectModal: false,
-                    newTask: { title: '', description: '', status: 'todo' },
-                    newProject: { name: '', balance: 0 }
-                }
-            },
-            computed: {
-                isAdmin() {
-                    return this.currentUser && this.currentUser.role === 'ADMIN';
-                },
-                totalBalance() {
-                    return this.financeData.reduce((sum, d) => sum + (Number(d.income) || 0) - (Number(d.expense) || 0), 0)
-                }
-            },
-            watch: {
-                tasks: { handler(v) { saveToDB('tasks', v); }, deep: true },
-                projects: { handler(v) { saveToDB('projects', v); }, deep: true },
-                financeData: { handler(v) { saveToDB('financeData', v); }, deep: true },
-                users: { handler(v) { saveToDB('users', v); }, deep: true },
-                currentUser: { handler(v) { if(v) saveToDB('currentUser', v); }, deep: true },
-                currentTab() {
-                    nextTick(() => {
-                        lucide.createIcons();
-                        if (this.currentTab === 'tasks') this.initDragDrop();
-                    })
-                }
-            },
-            async mounted() {
-                await initDB();
-                this.tasks = await loadFromDB('tasks') || [];
-                this.projects = await loadFromDB('projects') || [];
-                this.financeData = await loadFromDB('financeData') || Array.from({length: 31}, () => ({ income: 0, expense: 0, note: '' }));
-                this.users = await loadFromDB('users') || [
-                    {id: 1, name: 'ADMIN', role: 'ADMIN'},
-                    {id: 2, name: 'USER', role: 'USER'}
-                ];
-                this.currentUser = await loadFromDB('currentUser') || this.users[0];
-                this.selectedUserId = this.currentUser.id;
-                
-                nextTick(() => {
-                    lucide.createIcons();
-                    if (this.currentTab === 'tasks') this.initDragDrop();
-                });
-            },
-            methods: {
-                navClass(active) {
-                    return active ? 'text-gray-900 border-b-4 border-gray-800 pb-1' : 'text-gray-400 hover:text-gray-600 transition'
-                },
-                statusDot(status) {
-                    if (status === 'todo') return 'bg-red-500'
-                    if (status === 'doing') return 'bg-yellow-400'
-                    return 'bg-green-500'
-                },
-                getTasksByStatus(status) {
-                    return this.tasks.filter(t => t.status === status)
-                },
-                openTaskModal(status) {
-                    this.newTask = { title: '', description: '', status };
-                    this.showTaskModal = true;
-                    nextTick(() => lucide.createIcons());
-                },
-                closeTaskModal() {
-                    this.showTaskModal = false;
-                    this.newTask = { title: '', description: '', status: 'todo' };
-                },
-                saveTask() {
-                    if (!this.newTask.title.trim()) {
-                        alert('Введите название задачи');
-                        return;
-                    }
-                    this.tasks.push({
-                        ...this.newTask,
-                        id: Date.now().toString(),
-                        title: this.newTask.title.trim()
-                    });
-                    this.closeTaskModal();
-                    nextTick(() => lucide.createIcons());
-                },
-                deleteTask(id) {
-                    if (confirm('Удалить задачу?')) {
-                        this.tasks = this.tasks.filter(t => t.id !== id);
-                    }
-                },
-                closeProjectModal() {
-                    this.showProjectModal = false;
-                    this.newProject = { name: '', balance: 0 };
-                },
-                saveProject() {
-                    if (!this.newProject.name.trim()) {
-                        alert('Введите название проекта');
-                        return;
-                    }
-                    this.projects.push({
-                        ...this.newProject,
-                        id: Date.now().toString(),
-                        name: this.newProject.name.trim(),
-                        balance: this.newProject.balance || 0
-                    });
-                    this.closeProjectModal();
-                    nextTick(() => lucide.createIcons());
-                },
-                deleteProject(id) {
-                    if (confirm('Удалить проект?')) {
-                        this.projects = this.projects.filter(p => p.id !== id);
-                    }
-                },
-                checkAdminPass() {
-                    if (this.adminPassInput === this.correctPass) {
-                        this.adminAuth = true;
-                        this.adminPassInput = '';
-                        nextTick(() => lucide.createIcons());
-                    } else {
-                        alert("ACCESS DENIED");
-                    }
-                },
-                makeAdmin(userId) {
-                    const user = this.users.find(u => u.id === userId);
-                    if (user) {
-                        user.role = 'ADMIN';
-                        if (this.currentUser.id === userId) {
-                            this.currentUser.role = 'ADMIN';
-                        }
-                        alert(`${user.name} теперь ADMIN!`);
-                        nextTick(() => lucide.createIcons());
-                    }
-                },
-                switchUser() {
-                    const user = this.users.find(u => u.id === this.selectedUserId);
-                    if (user) {
-                        this.currentUser = { ...user };
-                        this.adminAuth = false;
-                        this.currentTab = 'tasks';
-                        alert(`Переключено на ${user.name} (${user.role})`);
-                        nextTick(() => lucide.createIcons());
-                    }
-                },
-                addUser() {
-                    const name = prompt("Введите имя пользователя:");
-                    if (name && name.trim()) {
-                        const isAdmin = confirm("Дать права ADMIN?");
-                        this.users.push({ id: Date.now(), name: name.trim(), role: isAdmin ? 'ADMIN' : 'USER' });
-                        nextTick(() => lucide.createIcons());
-                    }
-                },
-                deleteUser(id) {
-                    if (this.users.length <= 1) {
-                        alert("Нельзя удалить единственного пользователя");
-                        return;
-                    }
-                    if (confirm('Удалить пользователя?')) {
-                        this.users = this.users.filter(u => u.id !== id);
-                        if (this.currentUser.id === id) {
-                            this.currentUser = this.users[0];
-                        }
-                    }
-                },
-                initDragDrop() {
-                    const todoCol = this.$refs.todoCol;
-                    const doingCol = this.$refs.doingCol;
-                    const doneCol = this.$refs.doneCol;
-                    
-                    if (todoCol && todoCol[0]) {
-                        Sortable.create(todoCol[0], {
-                            group: { name: 'kanban', pull: true, revertClone: false },
-                            animation: 300,
-                            ghostClass: 'drag-ghost',
-                            onEnd: (evt) => this.handleDragEnd(evt)
-                        });
-                    }
-                    if (doingCol && doingCol[0]) {
-                        Sortable.create(doingCol[0], {
-                            group: { name: 'kanban', pull: true, revertClone: false },
-                            animation: 300,
-                            ghostClass: 'drag-ghost',
-                            onEnd: (evt) => this.handleDragEnd(evt)
-                        });
-                    }
-                    if (doneCol && doneCol[0]) {
-                        Sortable.create(doneCol[0], {
-                            group: { name: 'kanban', pull: false, revertClone: false },
-                            animation: 300,
-                            ghostClass: 'drag-ghost'
-                        });
-                    }
-                },
-                handleDragEnd(evt) {
-                    const taskId = evt.item.getAttribute('data-id');
-                    const newStatus = evt.to.getAttribute('data-status');
-                    if (taskId && newStatus) {
-                        const task = this.tasks.find(t => t.id === taskId);
-                        if (task && task.status !== newStatus) {
-                            task.status = newStatus;
-                            nextTick(() => lucide.createIcons());
-                        }
-                    }
-                },
-                downloadReport(type) {
-                    let content = `ОТЧЕТ ОТ ${new Date().toLocaleString()}\n========================================\n\n`;
-                    if (type === 'tasks') {
-                        content += `ВЫПОЛНЕННЫЕ ЗАДАЧИ:\n`;
-                        this.getTasksByStatus('done').forEach((t, i) => {
-                            content += `${i+1}. ${t.title}\n`;
-                            if (t.description) content += `   ${t.description}\n`;
-                        });
-                        if (this.getTasksByStatus('done').length === 0) content += `Нет выполненных задач\n`;
-                    } else {
-                        content += `ФИНАНСОВЫЙ ОТЧЕТ:\n`;
-                        let total = 0;
-                        this.financeData.forEach((d, i) => {
-                            const inc = Number(d.income) || 0;
-                            const exp = Number(d.expense) || 0;
-                            total += inc - exp;
-                            if (inc || exp) content += `День ${i+1}: +${inc} / -${exp}${d.note ? ` (${d.note})` : ''}\n`;
-                        });
-                        content += `\nИТОГО: ${total} ₽\n`;
-                    }
-                    const blob = new Blob([content], {type: 'text/plain'});
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = `report_${type}_${Date.now()}.txt`;
-                    link.click();
-                    URL.revokeObjectURL(link.href);
-                }
-            }
-        }).mount('#app')
-    </script>
+    <div class="section">
+      <h3>💰 Финансовый лог</h3>
+      <p><strong>Общая прибыль:</strong> {{ totalBalance.toLocaleString() }} ₽</p>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <input v-model="finForm.amount" type="number" class="input" placeholder="Сумма">
+        <input v-model="finForm.comment" class="input" placeholder="Комментарий">
+        <button class="btn" @click="addFinance">Добавить</button>
+      </div>
+      <table>
+        <thead><tr><th>Дата</th><th>Приход (+)</th><th>Расход (-)</th><th>Комментарий</th></tr></thead>
+        <tbody>
+          <tr v-for="f in finances.slice().reverse().slice(0, 10)" :key="f.id">
+            <td>{{ f.date }}</td>
+            <td style="color:green;">{{ f.amount > 0 ? '+' + f.amount : '-' }}</td>
+            <td style="color:red;">{{ f.amount < 0 ? '-' + Math.abs(f.amount) : '-' }}</td>
+            <td>{{ f.comment }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
+
+    createApp({
+      setup() {
+        const currentUser = ref({ name: 'Администратор', role: 'ADMIN' });
+        const tasks = ref([]);
+        const projects = ref([]);
+        const finances = ref([]);
+        const finForm = ref({ amount: '', comment: '' });
+        const syncStatus = ref('⏳ Загрузка...');
+        let pollInterval;
+
+        // 🔄 Загрузка данных из data.json
+        const loadData = async () => {
+          try {
+            const res = await fetch('api.php');
+            if (!res.ok) throw new Error('Network error');
+            const data = await res.json();
+            tasks.value = data.tasks || [];
+            projects.value = data.projects || [];
+            finances.value = data.finances || [];
+            syncStatus.value = '✅ Обновлено';
+          } catch (e) {
+            syncStatus.value = '❌ Ошибка синхронизации';
+            console.error(e);
+          }
+        };
+
+        // 💾 Сохранение данных в data.json
+        const saveData = async () => {
+          try {
+            const payload = { tasks: tasks.value, projects: projects.value, finances: finances.value };
+            const res = await fetch('api.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            syncStatus.value = res.ok ? '💾 Сохранено' : '❌ Ошибка сохранения';
+          } catch (e) {
+            syncStatus.value = '❌ Ошибка сети';
+          }
+        };
+
+        // Автообновление каждые 4 секунды
+        onMounted(() => {
+          loadData();
+          pollInterval = setInterval(loadData, 4000);
+        });
+        onUnmounted(() => clearInterval(pollInterval));
+
+        const tasksByStatus = computed(() => ({
+          todo: tasks.value.filter(t => t.status === 'todo'),
+          doing: tasks.value.filter(t => t.status === 'doing'),
+          done: tasks.value.filter(t => t.status === 'done')
+        }));
+
+        const totalBalance = computed(() => finances.value.reduce((sum, f) => sum + (f.amount || 0), 0));
+
+        const addTask = (status) => {
+          const title = prompt('Название задачи:');
+          if (!title?.trim()) return;
+          tasks.value.push({ id: Date.now(), title, description: '', status, createdBy: currentUser.value.name });
+          saveData();
+        };
+
+        const changeStatus = (id, newStatus) => {
+          const task = tasks.value.find(t => t.id === id);
+          if (task) task.status = newStatus;
+          saveData();
+        };
+
+        const createProject = () => {
+          const name = prompt('Название проекта:');
+          if (!name?.trim()) return;
+          projects.value.push({ id: Date.now(), name, balance: 0 });
+          saveData();
+        };
+
+        const addBalance = (id) => {
+          const amount = parseFloat(prompt('Внести сумму (₽):'));
+          if (isNaN(amount)) return;
+          const project = projects.value.find(p => p.id === id);
+          if (project) project.balance += amount;
+          saveData();
+        };
+
+        const addFinance = () => {
+          const amount = parseFloat(finForm.value.amount);
+          if (isNaN(amount) || !amount) return alert('Введите корректную сумму');
+          finances.value.push({
+            id: Date.now(),
+            amount,
+            comment: finForm.value.comment || '-',
+            date: new Date().toISOString().split('T')[0]
+          });
+          finForm.value = { amount: '', comment: '' };
+          saveData();
+        };
+
+        return {
+          currentUser, tasks, tasksByStatus, projects, finances,
+          totalBalance, finForm, syncStatus,
+          addTask, changeStatus, createProject, addBalance, addFinance
+        };
+      }
+    }).mount('#app');
+  </script>
 </body>
 </html>
