@@ -8,6 +8,26 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getDatabase, ref, set, onValue, push, update, remove } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyCkFreeCodingKeyForDemoPurposes",
+            authDomain: "business-manager-demo.firebaseapp.com",
+            databaseURL: "https://business-manager-demo-default-rtdb.firebaseio.com",
+            projectId: "business-manager-demo",
+            storageBucket: "business-manager-demo.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abc123def456"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        
+        window.firebaseDB = { db, ref, set, onValue, push, update, remove };
+    </script>
     <style>
         [v-cloak] { display: none; }
         .drag-ghost { opacity: 0.2; background: #94a3b8 !important; }
@@ -39,7 +59,6 @@
         }
 
         .no-drag { pointer-events: none; opacity: 0.7; cursor: default !important; }
-        /* Разрешаем клики по кнопке удаления даже в no-drag */
         .no-drag .delete-btn { pointer-events: auto; cursor: pointer; }
         
         ::-webkit-scrollbar { width: 8px; }
@@ -52,6 +71,19 @@
         @keyframes modalFade {
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
+        }
+
+        .sync-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            z-index: 1000;
         }
     </style>
 </head>
@@ -109,7 +141,6 @@
                                      :data-id="task.id" 
                                      :class="['task-card p-6 relative group', col === 'done' ? 'no-drag grayscale' : '']">
                                     
-                                    <!-- Кнопка удаления теперь отображается и для завершённых -->
                                     <button v-if="isAdmin" @click="deleteTask(task.id)" class="delete-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition z-10">
                                         <i data-lucide="x" class="w-4 h-4"></i>
                                     </button>
@@ -144,7 +175,7 @@
                             <h3 class="font-black uppercase text-2xl text-gray-800 mb-6 tracking-tighter">{{ project.name }}</h3>
                             <div class="bg-gray-50 p-6 rounded-[2rem] border border-gray-200 shadow-inner">
                                 <label class="text-[10px] font-black text-gray-400 uppercase block mb-2 tracking-[0.2em] italic">Баланс проекта (₽)</label>
-                                <input type="number" v-model.number="project.balance" @input="saveToStorage" class="w-full bg-transparent text-3xl font-mono font-black text-indigo-600 outline-none">
+                                <input type="number" v-model.number="project.balance" @input="updateProjectBalance(project)" class="w-full bg-transparent text-3xl font-mono font-black text-indigo-600 outline-none">
                             </div>
                         </div>
                     </div>
@@ -169,9 +200,9 @@
                                 <tbody class="divide-y divide-gray-100 font-bold italic text-sm">
                                     <tr v-for="day in 31" :key="day" class="hover:bg-gray-50 transition">
                                         <td class="p-6 bg-gray-50 text-center font-black text-gray-300 border-r border-gray-100">{{ day }}</td>
-                                        <td class="p-6 text-green-600"><input type="number" v-model.number="financeData[day-1].income" @input="saveToStorage" class="w-full bg-transparent outline-none focus:bg-white p-2 rounded-xl transition" placeholder="0"></td>
-                                        <td class="p-6 text-red-500"><input type="number" v-model.number="financeData[day-1].expense" @input="saveToStorage" class="w-full bg-transparent outline-none focus:bg-white p-2 rounded-xl transition" placeholder="0"></td>
-                                        <td class="p-6"><input type="text" v-model="financeData[day-1].note" @input="saveToStorage" class="w-full bg-transparent outline-none text-gray-400" placeholder="..."></td>
+                                        <td class="p-6 text-green-600"><input type="number" v-model.number="financeData[day-1].income" @input="updateFinanceDay(day-1)" class="w-full bg-transparent outline-none focus:bg-white p-2 rounded-xl transition" placeholder="0"></td>
+                                        <td class="p-6 text-red-500"><input type="number" v-model.number="financeData[day-1].expense" @input="updateFinanceDay(day-1)" class="w-full bg-transparent outline-none focus:bg-white p-2 rounded-xl transition" placeholder="0"></td>
+                                        <td class="p-6"><input type="text" v-model="financeData[day-1].note" @input="updateFinanceDay(day-1)" class="w-full bg-transparent outline-none text-gray-400" placeholder="..."></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -244,6 +275,12 @@
             </div>
         </main>
 
+        <!-- Индикатор синхронизации -->
+        <div class="sync-indicator" :class="syncStatus === 'synced' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">
+            <i data-lucide="cloud" class="w-3 h-3 inline mr-1"></i> 
+            {{ syncStatus === 'synced' ? 'Синхронизировано' : 'Синхронизация...' }}
+        </div>
+
         <!-- МОДАЛКИ -->
         <div v-if="showTaskModal" class="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-[200] p-4" @click.self="showTaskModal = false">
             <div class="bg-white w-full max-w-lg rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] overflow-hidden border border-gray-100 modal-animation">
@@ -294,7 +331,8 @@
                     showTaskModal: false,
                     showProjectModal: false,
                     newTask: { title: '', description: '', status: 'todo' },
-                    newProject: { name: '', balance: 0 }
+                    newProject: { name: '', balance: 0 },
+                    syncStatus: 'synced'
                 }
             },
             computed: {
@@ -305,136 +343,181 @@
                     return this.financeData.reduce((sum, d) => sum + (Number(d.income) || 0) - (Number(d.expense) || 0), 0)
                 }
             },
-            watch: {
-                tasks: { 
-                    handler(v) { 
-                        this.saveToStorage();
-                    }, 
-                    deep: true 
-                },
-                projects: { 
-                    handler(v) { 
-                        this.saveToStorage();
-                    }, 
-                    deep: true 
-                },
-                financeData: { 
-                    handler(v) { 
-                        this.saveToStorage();
-                    }, 
-                    deep: true 
-                },
-                users: { 
-                    handler(v) { 
-                        this.saveToStorage();
-                    }, 
-                    deep: true 
-                },
-                currentUser: { 
-                    handler(v) { 
-                        if(v) this.saveToStorage();
-                    }, 
-                    deep: true 
-                },
-                currentTab() {
-                    nextTick(() => {
-                        lucide.createIcons();
-                        if (this.currentTab === 'tasks') this.initDragDrop();
-                    })
-                }
-            },
             mounted() {
-                this.loadData();
+                this.initFirebaseSync();
                 nextTick(() => {
                     lucide.createIcons();
                     if (this.currentTab === 'tasks') this.initDragDrop();
                 });
             },
             methods: {
-                saveToStorage() {
-                    localStorage.setItem('tasks_data', JSON.stringify(this.tasks));
-                    localStorage.setItem('projects_data', JSON.stringify(this.projects));
-                    localStorage.setItem('finance_data', JSON.stringify(this.financeData));
-                    localStorage.setItem('users_data', JSON.stringify(this.users));
-                    if (this.currentUser) {
-                        localStorage.setItem('current_user', JSON.stringify(this.currentUser));
+                initFirebaseSync() {
+                    const { db, ref, onValue, set } = window.firebaseDB;
+                    
+                    // Синхронизация задач
+                    onValue(ref(db, 'tasks'), (snapshot) => {
+                        const data = snapshot.val();
+                        if (data) {
+                            this.tasks = Object.entries(data).map(([id, task]) => ({ ...task, id }));
+                        } else {
+                            this.tasks = [];
+                        }
+                        this.syncStatus = 'synced';
+                        nextTick(() => {
+                            lucide.createIcons();
+                            if (this.currentTab === 'tasks') this.initDragDrop();
+                        });
+                    });
+
+                    // Синхронизация проектов
+                    onValue(ref(db, 'projects'), (snapshot) => {
+                        const data = snapshot.val();
+                        if (data) {
+                            this.projects = Object.entries(data).map(([id, project]) => ({ ...project, id }));
+                        } else {
+                            this.projects = [];
+                        }
+                        nextTick(() => lucide.createIcons());
+                    });
+
+                    // Синхронизация финансов
+                    onValue(ref(db, 'finance'), (snapshot) => {
+                        const data = snapshot.val();
+                        if (data) {
+                            this.financeData = data;
+                        } else {
+                            this.financeData = Array.from({length: 31}, () => ({ income: 0, expense: 0, note: '' }));
+                            set(ref(db, 'finance'), this.financeData);
+                        }
+                        nextTick(() => lucide.createIcons());
+                    });
+
+                    // Синхронизация пользователей
+                    onValue(ref(db, 'users'), (snapshot) => {
+                        const data = snapshot.val();
+                        if (data) {
+                            this.users = Object.entries(data).map(([id, user]) => ({ ...user, id }));
+                        } else {
+                            this.users = [
+                                {id: '1', name: 'ADMIN', role: 'ADMIN'},
+                                {id: '2', name: 'USER', role: 'USER'}
+                            ];
+                            const usersObj = {};
+                            this.users.forEach(u => usersObj[u.id] = { name: u.name, role: u.role });
+                            set(ref(db, 'users'), usersObj);
+                        }
+                        
+                        // Установка текущего пользователя
+                        const savedUserId = localStorage.getItem('current_user_id');
+                        if (savedUserId && this.users.find(u => u.id === savedUserId)) {
+                            this.currentUser = this.users.find(u => u.id === savedUserId);
+                        } else {
+                            this.currentUser = this.users[0];
+                            localStorage.setItem('current_user_id', this.currentUser.id);
+                        }
+                        this.selectedUserId = this.currentUser.id;
+                        nextTick(() => lucide.createIcons());
+                    });
+                },
+
+                async saveToFirebase(path, data) {
+                    this.syncStatus = 'syncing';
+                    const { db, ref, set } = window.firebaseDB;
+                    try {
+                        await set(ref(db, path), data);
+                        this.syncStatus = 'synced';
+                    } catch (error) {
+                        console.error('Ошибка синхронизации:', error);
+                        this.syncStatus = 'synced';
                     }
                 },
-                loadData() {
-                    this.tasks = JSON.parse(localStorage.getItem('tasks_data')) || [];
-                    this.projects = JSON.parse(localStorage.getItem('projects_data')) || [];
-                    this.financeData = JSON.parse(localStorage.getItem('finance_data')) || Array.from({length: 31}, () => ({ income: 0, expense: 0, note: '' }));
-                    this.users = JSON.parse(localStorage.getItem('users_data')) || [
-                        {id: 1, name: 'ADMIN', role: 'ADMIN'},
-                        {id: 2, name: 'USER', role: 'USER'}
-                    ];
-                    const savedUser = JSON.parse(localStorage.getItem('current_user'));
-                    if (savedUser && this.users.find(u => u.id === savedUser.id)) {
-                        this.currentUser = savedUser;
-                    } else {
-                        this.currentUser = this.users[0];
-                    }
-                    this.selectedUserId = this.currentUser.id;
-                },
+
                 navClass(active) {
                     return active ? 'text-gray-900 border-b-4 border-gray-800 pb-1' : 'text-gray-400 hover:text-gray-600 transition'
                 },
+                
                 statusDot(status) {
                     if (status === 'todo') return 'bg-red-500'
                     if (status === 'doing') return 'bg-yellow-400'
                     return 'bg-green-500'
                 },
+                
                 getTasksByStatus(status) {
                     return this.tasks.filter(t => t.status === status)
                 },
+                
                 openTaskModal(status) {
                     this.newTask = { title: '', description: '', status };
                     this.showTaskModal = true;
                     nextTick(() => lucide.createIcons());
                 },
-                saveTask() {
+                
+                async saveTask() {
                     if (!this.newTask.title.trim()) {
                         alert('Введите название задачи');
                         return;
                     }
-                    this.tasks.push({
-                        ...this.newTask,
-                        id: Date.now().toString(),
-                        title: this.newTask.title.trim()
+                    
+                    const { db, ref, push, set } = window.firebaseDB;
+                    const tasksRef = ref(db, 'tasks');
+                    const newTaskRef = push(tasksRef);
+                    
+                    await set(newTaskRef, {
+                        title: this.newTask.title.trim(),
+                        description: this.newTask.description,
+                        status: this.newTask.status
                     });
-                    this.saveToStorage();
+                    
                     this.showTaskModal = false;
                     this.newTask = { title: '', description: '', status: 'todo' };
                     nextTick(() => lucide.createIcons());
                 },
-                deleteTask(id) {
+                
+                async deleteTask(id) {
                     if (confirm('Удалить задачу?')) {
-                        this.tasks = this.tasks.filter(t => t.id !== id);
-                        this.saveToStorage();
+                        const { db, ref, remove } = window.firebaseDB;
+                        await remove(ref(db, `tasks/${id}`));
                     }
                 },
-                saveProject() {
+                
+                async saveProject() {
                     if (!this.newProject.name.trim()) {
                         alert('Введите название проекта');
                         return;
                     }
-                    this.projects.push({
-                        ...this.newProject,
-                        id: Date.now().toString(),
+                    
+                    const { db, ref, push, set } = window.firebaseDB;
+                    const projectsRef = ref(db, 'projects');
+                    const newProjectRef = push(projectsRef);
+                    
+                    await set(newProjectRef, {
                         name: this.newProject.name.trim(),
                         balance: this.newProject.balance || 0
                     });
-                    this.saveToStorage();
+                    
                     this.showProjectModal = false;
                     this.newProject = { name: '', balance: 0 };
                     nextTick(() => lucide.createIcons());
                 },
-                deleteProject(id) {
+                
+                async deleteProject(id) {
                     if (confirm('Удалить проект?')) {
-                        this.projects = this.projects.filter(p => p.id !== id);
-                        this.saveToStorage();
+                        const { db, ref, remove } = window.firebaseDB;
+                        await remove(ref(db, `projects/${id}`));
                     }
                 },
+                
+                async updateProjectBalance(project) {
+                    const { db, ref, update } = window.firebaseDB;
+                    await update(ref(db, `projects/${project.id}`), {
+                        balance: project.balance
+                    });
+                },
+                
+                async updateFinanceDay(dayIndex) {
+                    await this.saveToFirebase('finance', this.financeData);
+                },
+                
                 checkAdminPass() {
                     if (this.adminPassInput === this.correctPass) {
                         this.adminAuth = true;
@@ -444,51 +527,67 @@
                         alert("ACCESS DENIED");
                     }
                 },
-                makeAdmin(userId) {
-                    const user = this.users.find(u => u.id === userId);
-                    if (user) {
-                        user.role = 'ADMIN';
-                        if (this.currentUser.id === userId) {
-                            this.currentUser.role = 'ADMIN';
-                        }
-                        this.saveToStorage();
-                        alert(`${user.name} теперь ADMIN!`);
-                        nextTick(() => lucide.createIcons());
+                
+                async makeAdmin(userId) {
+                    const { db, ref, update } = window.firebaseDB;
+                    await update(ref(db, `users/${userId}`), { role: 'ADMIN' });
+                    
+                    if (this.currentUser.id === userId) {
+                        this.currentUser.role = 'ADMIN';
                     }
+                    alert(`Пользователь теперь ADMIN!`);
+                    nextTick(() => lucide.createIcons());
                 },
+                
                 switchUser() {
                     const user = this.users.find(u => u.id === this.selectedUserId);
                     if (user) {
                         this.currentUser = { ...user };
-                        this.saveToStorage();
+                        localStorage.setItem('current_user_id', user.id);
                         this.adminAuth = false;
                         this.currentTab = 'tasks';
                         alert(`Переключено на ${user.name} (${user.role})`);
                         nextTick(() => lucide.createIcons());
                     }
                 },
-                addUser() {
+                
+                async addUser() {
                     const name = prompt("Введите имя пользователя:");
                     if (name && name.trim()) {
                         const isAdmin = confirm("Дать права ADMIN?");
-                        this.users.push({ id: Date.now(), name: name.trim(), role: isAdmin ? 'ADMIN' : 'USER' });
-                        this.saveToStorage();
+                        
+                        const { db, ref, push, set } = window.firebaseDB;
+                        const usersRef = ref(db, 'users');
+                        const newUserRef = push(usersRef);
+                        
+                        await set(newUserRef, {
+                            name: name.trim(),
+                            role: isAdmin ? 'ADMIN' : 'USER'
+                        });
+                        
                         nextTick(() => lucide.createIcons());
                     }
                 },
-                deleteUser(id) {
+                
+                async deleteUser(id) {
                     if (this.users.length <= 1) {
                         alert("Нельзя удалить единственного пользователя");
                         return;
                     }
                     if (confirm('Удалить пользователя?')) {
-                        this.users = this.users.filter(u => u.id !== id);
+                        const { db, ref, remove } = window.firebaseDB;
+                        await remove(ref(db, `users/${id}`));
+                        
                         if (this.currentUser.id === id) {
-                            this.currentUser = this.users[0];
+                            const nextUser = this.users.find(u => u.id !== id);
+                            if (nextUser) {
+                                this.currentUser = nextUser;
+                                localStorage.setItem('current_user_id', nextUser.id);
+                            }
                         }
-                        this.saveToStorage();
                     }
                 },
+                
                 initDragDrop() {
                     const todoCol = this.$refs.todoCol;
                     const doingCol = this.$refs.doingCol;
@@ -503,62 +602,3 @@
                         });
                     }
                     if (doingCol && doingCol[0]) {
-                        Sortable.create(doingCol[0], {
-                            group: { name: 'kanban', pull: true, revertClone: false },
-                            animation: 300,
-                            ghostClass: 'drag-ghost',
-                            onEnd: (evt) => this.handleDragEnd(evt)
-                        });
-                    }
-                    if (doneCol && doneCol[0]) {
-                        Sortable.create(doneCol[0], {
-                            group: { name: 'kanban', pull: false, revertClone: false },
-                            animation: 300,
-                            ghostClass: 'drag-ghost'
-                        });
-                    }
-                },
-                handleDragEnd(evt) {
-                    const taskId = evt.item.getAttribute('data-id');
-                    const newStatus = evt.to.getAttribute('data-status');
-                    if (taskId && newStatus) {
-                        const task = this.tasks.find(t => t.id === taskId);
-                        if (task && task.status !== newStatus) {
-                            task.status = newStatus;
-                            this.saveToStorage();
-                            nextTick(() => lucide.createIcons());
-                        }
-                    }
-                },
-                downloadReport(type) {
-                    let content = `ОТЧЕТ ОТ ${new Date().toLocaleString()}\n========================================\n\n`;
-                    if (type === 'tasks') {
-                        content += `ВЫПОЛНЕННЫЕ ЗАДАЧИ:\n`;
-                        this.getTasksByStatus('done').forEach((t, i) => {
-                            content += `${i+1}. ${t.title}\n`;
-                            if (t.description) content += `   ${t.description}\n`;
-                        });
-                        if (this.getTasksByStatus('done').length === 0) content += `Нет выполненных задач\n`;
-                    } else {
-                        content += `ФИНАНСОВЫЙ ОТЧЕТ:\n`;
-                        let total = 0;
-                        this.financeData.forEach((d, i) => {
-                            const inc = Number(d.income) || 0;
-                            const exp = Number(d.expense) || 0;
-                            total += inc - exp;
-                            if (inc || exp) content += `День ${i+1}: +${inc} / -${exp}${d.note ? ` (${d.note})` : ''}\n`;
-                        });
-                        content += `\nИТОГО: ${total} ₽\n`;
-                    }
-                    const blob = new Blob([content], {type: 'text/plain'});
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = `report_${type}_${Date.now()}.txt`;
-                    link.click();
-                    URL.revokeObjectURL(link.href);
-                }
-            }
-        }).mount('#app')
-    </script>
-</body>
-</html>
