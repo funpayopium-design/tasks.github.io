@@ -39,7 +39,6 @@
         }
 
         .no-drag { pointer-events: none; opacity: 0.7; cursor: default !important; }
-        /* Разрешаем клики по кнопке удаления даже в no-drag */
         .no-drag .delete-btn { pointer-events: auto; cursor: pointer; }
         
         ::-webkit-scrollbar { width: 8px; }
@@ -109,7 +108,6 @@
                                      :data-id="task.id" 
                                      :class="['task-card p-6 relative group', col === 'done' ? 'no-drag grayscale' : '']">
                                     
-                                    <!-- Кнопка удаления теперь отображается и для завершённых -->
                                     <button v-if="isAdmin" @click="deleteTask(task.id)" class="delete-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition z-10">
                                         <i data-lucide="x" class="w-4 h-4"></i>
                                     </button>
@@ -280,7 +278,7 @@
 
         // Инициализация IndexedDB
         let db;
-        const DB_NAME = 'BusinessManagementDB';
+        const DB_NAME = 'BusinessDB';
         const DB_VERSION = 1;
         
         function initDB() {
@@ -295,59 +293,28 @@
                 
                 request.onupgradeneeded = (event) => {
                     const db = event.target.result;
-                    
-                    if (!db.objectStoreNames.contains('tasks')) {
-                        db.createObjectStore('tasks', { keyPath: 'id' });
-                    }
-                    if (!db.objectStoreNames.contains('projects')) {
-                        db.createObjectStore('projects', { keyPath: 'id' });
-                    }
-                    if (!db.objectStoreNames.contains('finance')) {
-                        db.createObjectStore('finance', { keyPath: 'id' });
-                    }
-                    if (!db.objectStoreNames.contains('users')) {
-                        db.createObjectStore('users', { keyPath: 'id' });
-                    }
-                    if (!db.objectStoreNames.contains('currentUser')) {
-                        db.createObjectStore('currentUser', { keyPath: 'id' });
+                    if (!db.objectStoreNames.contains('appData')) {
+                        db.createObjectStore('appData', { keyPath: 'key' });
                     }
                 };
             });
         }
         
-        function saveToDB(storeName, data) {
+        function saveToDB(key, data) {
             if (!db) return;
-            const transaction = db.transaction([storeName], 'readwrite');
-            const store = transaction.objectStore(storeName);
-            store.put(data);
+            const transaction = db.transaction(['appData'], 'readwrite');
+            const store = transaction.objectStore('appData');
+            store.put({ key, value: data });
         }
         
-        function deleteFromDB(storeName, id) {
-            if (!db) return;
-            const transaction = db.transaction([storeName], 'readwrite');
-            const store = transaction.objectStore(storeName);
-            store.delete(id);
-        }
-        
-        function saveAllToDB(storeName, items) {
-            if (!db) return;
-            const transaction = db.transaction([storeName], 'readwrite');
-            const store = transaction.objectStore(storeName);
-            store.clear();
-            items.forEach(item => store.put(item));
-        }
-        
-        function loadFromDB(storeName) {
+        async function loadFromDB(key) {
+            if (!db) return null;
             return new Promise((resolve) => {
-                if (!db) {
-                    resolve([]);
-                    return;
-                }
-                const transaction = db.transaction([storeName], 'readonly');
-                const store = transaction.objectStore(storeName);
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => resolve([]);
+                const transaction = db.transaction(['appData'], 'readonly');
+                const store = transaction.objectStore('appData');
+                const request = store.get(key);
+                request.onsuccess = () => resolve(request.result ? request.result.value : null);
+                request.onerror = () => resolve(null);
             });
         }
 
@@ -379,36 +346,11 @@
                 }
             },
             watch: {
-                tasks: { 
-                    handler(v) { 
-                        v.forEach(task => saveToDB('tasks', task));
-                    }, 
-                    deep: true 
-                },
-                projects: { 
-                    handler(v) { 
-                        v.forEach(project => saveToDB('projects', project));
-                    }, 
-                    deep: true 
-                },
-                financeData: { 
-                    handler(v) { 
-                        saveToDB('finance', { id: 'financeData', data: v });
-                    }, 
-                    deep: true 
-                },
-                users: { 
-                    handler(v) { 
-                        v.forEach(user => saveToDB('users', user));
-                    }, 
-                    deep: true 
-                },
-                currentUser: { 
-                    handler(v) { 
-                        if(v) saveToDB('currentUser', { id: 'current', user: v });
-                    }, 
-                    deep: true 
-                },
+                tasks: { handler(v) { saveToDB('tasks', v); }, deep: true },
+                projects: { handler(v) { saveToDB('projects', v); }, deep: true },
+                financeData: { handler(v) { saveToDB('financeData', v); }, deep: true },
+                users: { handler(v) { saveToDB('users', v); }, deep: true },
+                currentUser: { handler(v) { if(v) saveToDB('currentUser', v); }, deep: true },
                 currentTab() {
                     nextTick(() => {
                         lucide.createIcons();
@@ -418,37 +360,22 @@
             },
             async mounted() {
                 await initDB();
-                await this.loadData();
+                this.tasks = await loadFromDB('tasks') || [];
+                this.projects = await loadFromDB('projects') || [];
+                this.financeData = await loadFromDB('financeData') || Array.from({length: 31}, () => ({ income: 0, expense: 0, note: '' }));
+                this.users = await loadFromDB('users') || [
+                    {id: 1, name: 'ADMIN', role: 'ADMIN'},
+                    {id: 2, name: 'USER', role: 'USER'}
+                ];
+                this.currentUser = await loadFromDB('currentUser') || this.users[0];
+                this.selectedUserId = this.currentUser.id;
+                
                 nextTick(() => {
                     lucide.createIcons();
                     if (this.currentTab === 'tasks') this.initDragDrop();
                 });
             },
             methods: {
-                async loadData() {
-                    const tasks = await loadFromDB('tasks');
-                    this.tasks = tasks.length > 0 ? tasks : [];
-                    
-                    const projects = await loadFromDB('projects');
-                    this.projects = projects.length > 0 ? projects : [];
-                    
-                    const finance = await loadFromDB('finance');
-                    this.financeData = finance.length > 0 ? finance[0].data : Array.from({length: 31}, () => ({ income: 0, expense: 0, note: '' }));
-                    
-                    const users = await loadFromDB('users');
-                    this.users = users.length > 0 ? users : [
-                        {id: '1', name: 'ADMIN', role: 'ADMIN'},
-                        {id: '2', name: 'USER', role: 'USER'}
-                    ];
-                    
-                    const currentUserData = await loadFromDB('currentUser');
-                    if (currentUserData.length > 0) {
-                        this.currentUser = currentUserData[0].user;
-                    } else {
-                        this.currentUser = this.users[0];
-                    }
-                    this.selectedUserId = this.currentUser.id;
-                },
                 navClass(active) {
                     return active ? 'text-gray-900 border-b-4 border-gray-800 pb-1' : 'text-gray-400 hover:text-gray-600 transition'
                 },
@@ -470,13 +397,11 @@
                         alert('Введите название задачи');
                         return;
                     }
-                    const task = {
+                    this.tasks.push({
                         ...this.newTask,
                         id: Date.now().toString(),
                         title: this.newTask.title.trim()
-                    };
-                    this.tasks.push(task);
-                    saveToDB('tasks', task);
+                    });
                     this.showTaskModal = false;
                     this.newTask = { title: '', description: '', status: 'todo' };
                     nextTick(() => lucide.createIcons());
@@ -484,7 +409,6 @@
                 deleteTask(id) {
                     if (confirm('Удалить задачу?')) {
                         this.tasks = this.tasks.filter(t => t.id !== id);
-                        deleteFromDB('tasks', id);
                     }
                 },
                 saveProject() {
@@ -492,14 +416,12 @@
                         alert('Введите название проекта');
                         return;
                     }
-                    const project = {
+                    this.projects.push({
                         ...this.newProject,
                         id: Date.now().toString(),
                         name: this.newProject.name.trim(),
                         balance: this.newProject.balance || 0
-                    };
-                    this.projects.push(project);
-                    saveToDB('projects', project);
+                    });
                     this.showProjectModal = false;
                     this.newProject = { name: '', balance: 0 };
                     nextTick(() => lucide.createIcons());
@@ -507,7 +429,6 @@
                 deleteProject(id) {
                     if (confirm('Удалить проект?')) {
                         this.projects = this.projects.filter(p => p.id !== id);
-                        deleteFromDB('projects', id);
                     }
                 },
                 checkAdminPass() {
@@ -526,7 +447,6 @@
                         if (this.currentUser.id === userId) {
                             this.currentUser.role = 'ADMIN';
                         }
-                        saveToDB('users', user);
                         alert(`${user.name} теперь ADMIN!`);
                         nextTick(() => lucide.createIcons());
                     }
@@ -545,13 +465,7 @@
                     const name = prompt("Введите имя пользователя:");
                     if (name && name.trim()) {
                         const isAdmin = confirm("Дать права ADMIN?");
-                        const user = { 
-                            id: Date.now().toString(), 
-                            name: name.trim(), 
-                            role: isAdmin ? 'ADMIN' : 'USER' 
-                        };
-                        this.users.push(user);
-                        saveToDB('users', user);
+                        this.users.push({ id: Date.now(), name: name.trim(), role: isAdmin ? 'ADMIN' : 'USER' });
                         nextTick(() => lucide.createIcons());
                     }
                 },
@@ -562,7 +476,6 @@
                     }
                     if (confirm('Удалить пользователя?')) {
                         this.users = this.users.filter(u => u.id !== id);
-                        deleteFromDB('users', id);
                         if (this.currentUser.id === id) {
                             this.currentUser = this.users[0];
                         }
@@ -604,7 +517,6 @@
                         const task = this.tasks.find(t => t.id === taskId);
                         if (task && task.status !== newStatus) {
                             task.status = newStatus;
-                            saveToDB('tasks', task);
                             nextTick(() => lucide.createIcons());
                         }
                     }
@@ -619,4 +531,25 @@
                         });
                         if (this.getTasksByStatus('done').length === 0) content += `Нет выполненных задач\n`;
                     } else {
-                        content += `ФИНАНСОВЫЙ ОТЧЕТ
+                        content += `ФИНАНСОВЫЙ ОТЧЕТ:\n`;
+                        let total = 0;
+                        this.financeData.forEach((d, i) => {
+                            const inc = Number(d.income) || 0;
+                            const exp = Number(d.expense) || 0;
+                            total += inc - exp;
+                            if (inc || exp) content += `День ${i+1}: +${inc} / -${exp}${d.note ? ` (${d.note})` : ''}\n`;
+                        });
+                        content += `\nИТОГО: ${total} ₽\n`;
+                    }
+                    const blob = new Blob([content], {type: 'text/plain'});
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `report_${type}_${Date.now()}.txt`;
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>
