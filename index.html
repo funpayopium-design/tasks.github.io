@@ -6,19 +6,12 @@
     <title>Бизнес Управление</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
         }
-        
-        /* Auth Container */
         .auth-container {
             min-height: 100vh;
             display: flex;
@@ -26,21 +19,18 @@
             justify-content: center;
             padding: 20px;
         }
-        
         .auth-box {
             background: white;
             border-radius: 16px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             padding: 40px;
             width: 100%;
-            max-width: 480px;
+            max-width: 420px;
         }
-        
         .auth-header {
             text-align: center;
             margin-bottom: 30px;
         }
-        
         .auth-header h1 {
             font-size: 28px;
             color: #2d3748;
@@ -50,37 +40,7 @@
             justify-content: center;
             gap: 10px;
         }
-        
-        .auth-header p {
-            color: #718096;
-            font-size: 14px;
-        }
-        
-        .auth-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-        }
-        
-        .auth-tab {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #e2e8f0;
-            background: white;
-            color: #4a5568;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        
-        .auth-tab.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-color: transparent;
-        }
-        
+        .auth-header p { color: #718096; font-size: 14px; }
         .error-message {
             background: #fed7d7;
             color: #c53030;
@@ -90,11 +50,7 @@
             font-size: 14px;
             text-align: center;
         }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
+        .form-group { margin-bottom: 20px; }
         .form-group label {
             display: block;
             margin-bottom: 8px;
@@ -102,7 +58,6 @@
             font-size: 14px;
             font-weight: 500;
         }
-        
         .form-group input {
             width: 100%;
             padding: 12px 16px;
@@ -111,12 +66,10 @@
             font-size: 14px;
             transition: all 0.3s;
         }
-        
         .form-group input:focus {
             outline: none;
             border-color: #667eea;
         }
-        
         .btn-primary {
             width: 100%;
             padding: 14px;
@@ -129,22 +82,10 @@
             cursor: pointer;
             transition: transform 0.2s;
         }
+        .btn-primary:hover { transform: translateY(-2px); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         
-        .btn-primary:hover {
-            transform: translateY(-2px);
-        }
-        
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        /* Main App */
-        .app-container {
-            min-height: 100vh;
-        }
-        
+        .app-container { min-height: 100vh; }
         .header {
             background: white;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -153,7 +94,6 @@
             top: 0;
             z-index: 100;
         }
-        
         .header-content {
             max-width: 1400px;
             margin: 0 auto;
@@ -162,7 +102,6 @@
             align-items: center;
             height: 70px;
         }
-        
         .logo {
             font-size: 24px;
             font-weight: 700;
@@ -170,7 +109,6 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        
         .nav-tabs {
             display: flex;
             gap: 5px;
@@ -178,7 +116,6 @@
             padding: 5px;
             border-radius: 12px;
         }
-        
         .nav-tab {
             padding: 10px 20px;
             border: none;
@@ -190,19 +127,16 @@
             font-weight: 500;
             transition: all 0.3s;
         }
-        
         .nav-tab.active {
             background: white;
             color: #667eea;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        
         .user-info {
             display: flex;
             align-items: center;
             gap: 15px;
         }
-        
         .user-badge {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -211,7 +145,6 @@
             font-size: 13px;
             font-weight: 600;
         }
-        
         .btn-logout {
             padding: 8px 16px;
             background: #fc8181;
@@ -221,41 +154,32 @@
             cursor: pointer;
             font-size: 13px;
             font-weight: 600;
-            transition: all 0.3s;
         }
-        
-        .btn-logout:hover {
-            background: #f56565;
-        }
+        .btn-logout:hover { background: #f56565; }
         
         .main-content {
             max-width: 1400px;
             margin: 0 auto;
             padding: 30px;
         }
-        
         .section-title {
             font-size: 24px;
             color: #2d3748;
             margin-bottom: 25px;
             font-weight: 700;
         }
-        
-        /* Kanban */
         .kanban-board {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 25px;
             margin-bottom: 30px;
         }
-        
         .kanban-column {
             background: white;
             border-radius: 16px;
             padding: 20px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        
         .column-header {
             display: flex;
             justify-content: space-between;
@@ -264,13 +188,11 @@
             padding-bottom: 15px;
             border-bottom: 2px solid #edf2f7;
         }
-        
         .column-title {
             font-size: 16px;
             font-weight: 700;
             color: #2d3748;
         }
-        
         .task-count {
             background: #edf2f7;
             color: #4a5568;
@@ -279,7 +201,6 @@
             font-size: 12px;
             font-weight: 600;
         }
-        
         .task-card {
             background: #f7fafc;
             border-left: 4px solid #667eea;
@@ -288,25 +209,21 @@
             margin-bottom: 12px;
             transition: all 0.3s;
         }
-        
         .task-card:hover {
             transform: translateX(5px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        
         .task-title {
             font-size: 15px;
             font-weight: 600;
             color: #2d3748;
             margin-bottom: 8px;
         }
-        
         .task-description {
             font-size: 13px;
             color: #718096;
             margin-bottom: 12px;
         }
-        
         .btn-small {
             padding: 6px 12px;
             background: #667eea;
@@ -317,7 +234,6 @@
             font-size: 12px;
             font-weight: 600;
         }
-        
         .btn-add {
             width: 100%;
             padding: 12px;
@@ -328,85 +244,60 @@
             cursor: pointer;
             font-size: 14px;
             font-weight: 600;
-            transition: all 0.3s;
         }
-        
         .btn-add:hover {
             background: #e2e8f0;
             border-color: #667eea;
             color: #667eea;
         }
-        
         .empty-state {
             text-align: center;
             padding: 40px 20px;
             color: #718096;
             font-size: 14px;
         }
-        
-        /* Projects */
         .projects-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
         }
-        
         .project-card {
             background: white;
             border-radius: 16px;
             padding: 25px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        
         .project-name {
             font-size: 18px;
             font-weight: 700;
             color: #2d3748;
             margin-bottom: 15px;
         }
-        
         .project-balance {
             font-size: 24px;
             font-weight: 700;
             color: #667eea;
             margin-bottom: 15px;
         }
-        
-        /* Finances */
         .finance-table {
             background: white;
             border-radius: 16px;
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        
         .finance-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 20px 25px;
         }
-        
-        .finance-header h3 {
-            font-size: 20px;
-            margin-bottom: 10px;
-        }
-        
-        .total-balance {
-            font-size: 32px;
-            font-weight: 700;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
+        .finance-header h3 { font-size: 20px; margin-bottom: 10px; }
+        .total-balance { font-size: 32px; font-weight: 700; }
+        table { width: 100%; border-collapse: collapse; }
         th, td {
             padding: 15px 25px;
             text-align: left;
             border-bottom: 1px solid #edf2f7;
         }
-        
         th {
             background: #f7fafc;
             font-weight: 600;
@@ -414,54 +305,30 @@
             font-size: 13px;
             text-transform: uppercase;
         }
+        td { font-size: 14px; color: #2d3748; }
+        tr:hover { background: #f7fafc; }
         
-        td {
-            font-size: 14px;
-            color: #2d3748;
-        }
-        
-        tr:hover {
-            background: #f7fafc;
-        }
-        
-        /* Admin */
         .admin-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
-        
         .stat-card {
             background: white;
             border-radius: 16px;
             padding: 25px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        
-        .stat-label {
-            font-size: 14px;
-            color: #718096;
-            margin-bottom: 10px;
-        }
-        
-        .stat-value {
-            font-size: 36px;
-            font-weight: 700;
-            color: #2d3748;
-        }
-        
-        .stat-value.online {
-            color: #48bb78;
-        }
-        
+        .stat-label { font-size: 14px; color: #718096; margin-bottom: 10px; }
+        .stat-value { font-size: 36px; font-weight: 700; color: #2d3748; }
+        .stat-value.online { color: #48bb78; }
         .users-table {
             background: white;
             border-radius: 16px;
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        
         .status-badge {
             display: inline-flex;
             align-items: center;
@@ -471,41 +338,17 @@
             font-size: 12px;
             font-weight: 600;
         }
-        
-        .status-badge.online {
-            background: #c6f6d5;
-            color: #22543d;
-        }
-        
-        .status-badge.offline {
-            background: #fed7d7;
-            color: #742a2a;
-        }
-        
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: currentColor;
-        }
-        
+        .status-badge.online { background: #c6f6d5; color: #22543d; }
+        .status-badge.offline { background: #fed7d7; color: #742a2a; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
         .role-badge {
             padding: 6px 12px;
             border-radius: 6px;
             font-size: 12px;
             font-weight: 600;
         }
-        
-        .role-badge.admin {
-            background: #fef5e7;
-            color: #c05621;
-        }
-        
-        .role-badge.user {
-            background: #e6fffa;
-            color: #234e52;
-        }
-        
+        .role-badge.admin { background: #fef5e7; color: #c05621; }
+        .role-badge.user { background: #e6fffa; color: #234e52; }
         .btn-action {
             padding: 6px 12px;
             border: none;
@@ -514,51 +357,24 @@
             font-size: 12px;
             font-weight: 600;
             margin-right: 5px;
-            transition: all 0.3s;
         }
-        
-        .btn-make-admin {
-            background: #fef5e7;
-            color: #c05621;
-        }
-        
-        .btn-delete {
-            background: #fed7d7;
-            color: #c53030;
-        }
-        
-        .sync-status {
-            font-size: 12px;
-            color: #718096;
-            margin-left: 10px;
-        }
+        .btn-make-admin { background: #fef5e7; color: #c05621; }
+        .sync-status { font-size: 12px; color: #718096; margin-left: 10px; }
     </style>
 </head>
 <body>
     <div id="app">
-        <!-- Auth Screen -->
+        <!-- Login Screen -->
         <div class="auth-container" v-if="!isAuthenticated">
             <div class="auth-box">
                 <div class="auth-header">
                     <h1>🔐 Бизнес Управление</h1>
-                    <p>Войдите или зарегистрируйтесь для продолжения</p>
+                    <p>Войдите для продолжения работы</p>
                 </div>
                 
-                <div class="auth-tabs">
-                    <button class="auth-tab" :class="{ active: authMode === 'login' }" @click="authMode = 'login'">
-                        Вход
-                    </button>
-                    <button class="auth-tab" :class="{ active: authMode === 'register' }" @click="authMode = 'register'">
-                        Регистрация
-                    </button>
-                </div>
+                <div class="error-message" v-if="authError">{{ authError }}</div>
                 
-                <div class="error-message" v-if="authError">
-                    {{ authError }}
-                </div>
-                
-                <!-- Login Form -->
-                <form v-if="authMode === 'login'" @submit.prevent="login">
+                <form @submit.prevent="login">
                     <div class="form-group">
                         <label>Имя пользователя или логин</label>
                         <input type="text" v-model="loginForm.username" required placeholder="Введите логин">
@@ -572,77 +388,45 @@
                     </button>
                 </form>
                 
-                <!-- Register Form -->
-                <form v-if="authMode === 'register'" @submit.prevent="register">
-                    <div class="form-group">
-                        <label>Полное имя</label>
-                        <input type="text" v-model="registerForm.name" required placeholder="Введите ваше имя">
-                    </div>
-                    <div class="form-group">
-                        <label>Логин</label>
-                        <input type="text" v-model="registerForm.username" required placeholder="Придумайте логин">
-                    </div>
-                    <div class="form-group">
-                        <label>Пароль</label>
-                        <input type="password" v-model="registerForm.password" required placeholder="Придумайте пароль" minlength="6">
-                    </div>
-                    <button type="submit" class="btn-primary" :disabled="authLoading">
-                        {{ authLoading ? 'Регистрация...' : 'Зарегистрироваться' }}
-                    </button>
-                </form>
+                <div style="margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px; font-size: 13px; color: #4a5568;">
+                    <strong>Доступные аккаунты:</strong><br>
+                    • admin / admin123 (Администратор)<br>
+                    • manager / 123456 (Менеджер)<br>
+                    • user / 123456 (Сотрудник)
+                </div>
             </div>
         </div>
         
         <!-- Main App -->
         <div class="app-container" v-else>
-            <!-- Header -->
             <div class="header">
                 <div class="header-content">
                     <div class="logo">📊 Бизнес Управление</div>
-                    
                     <div class="nav-tabs">
-                        <button class="nav-tab" :class="{ active: currentTab === 'tasks' }" @click="currentTab = 'tasks'">
-                            Задачи
-                        </button>
-                        <button class="nav-tab" :class="{ active: currentTab === 'projects' }" @click="currentTab = 'projects'">
-                            Проекты
-                        </button>
-                        <button class="nav-tab" :class="{ active: currentTab === 'finances' }" @click="currentTab = 'finances'">
-                            Финансы
-                        </button>
-                        <button class="nav-tab" :class="{ active: currentTab === 'reports' }" @click="currentTab = 'reports'">
-                            Отчеты
-                        </button>
-                        <button class="nav-tab" :class="{ active: currentTab === 'admin' }" @click="currentTab = 'admin'" v-if="currentUser.role === 'ADMIN'">
-                            Админ
-                        </button>
+                        <button class="nav-tab" :class="{ active: currentTab === 'tasks' }" @click="currentTab = 'tasks'">Задачи</button>
+                        <button class="nav-tab" :class="{ active: currentTab === 'projects' }" @click="currentTab = 'projects'">Проекты</button>
+                        <button class="nav-tab" :class="{ active: currentTab === 'finances' }" @click="currentTab = 'finances'">Финансы</button>
+                        <button class="nav-tab" :class="{ active: currentTab === 'reports' }" @click="currentTab = 'reports'">Отчеты</button>
+                        <button class="nav-tab" :class="{ active: currentTab === 'admin' }" @click="currentTab = 'admin'" v-if="currentUser.role === 'ADMIN'">Админ</button>
                     </div>
-                    
                     <div class="user-info">
-                        <div class="user-badge">
-                            {{ currentUser.name }} ({{ currentUser.role }})
-                        </div>
+                        <div class="user-badge">{{ currentUser.name }} ({{ currentUser.role }})</div>
                         <span class="sync-status">{{ syncStatus }}</span>
-                        <button class="btn-logout" @click="logout">
-                            Выйти
-                        </button>
+                        <button class="btn-logout" @click="logout">Выйти</button>
                     </div>
                 </div>
             </div>
             
-            <!-- Main Content -->
             <div class="main-content">
-                <!-- Tasks Tab -->
+                <!-- Tasks -->
                 <div v-if="currentTab === 'tasks'">
                     <h2 class="section-title">Задачи на месяц: {{ currentMonth }}</h2>
-                    
                     <div class="kanban-board">
                         <div class="kanban-column" v-for="col in columns" :key="col.id">
                             <div class="column-header">
                                 <span class="column-title">{{ col.title }}</span>
                                 <span class="task-count">{{ getTasksCount(col.id) }}</span>
                             </div>
-                            
                             <div class="task-card" v-for="task in getTasksByStatus(col.id)" :key="task.id">
                                 <div class="task-title">{{ task.title }}</div>
                                 <div class="task-description">{{ task.description || 'Нет описания' }}</div>
@@ -650,43 +434,29 @@
                                     {{ col.nextStatus === 'done' ? '✓ Завершено' : '→' }}
                                 </button>
                             </div>
-                            
-                            <div class="empty-state" v-if="getTasksCount(col.id) === 0">
-                                Нет задач
-                            </div>
-                            
-                            <button class="btn-add" @click="addTask(col.id)" v-if="currentUser.role === 'ADMIN'">
-                                + Добавить задачу
-                            </button>
+                            <div class="empty-state" v-if="getTasksCount(col.id) === 0">Нет задач</div>
+                            <button class="btn-add" @click="addTask(col.id)" v-if="currentUser.role === 'ADMIN'">+ Добавить задачу</button>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Projects Tab -->
+                <!-- Projects -->
                 <div v-if="currentTab === 'projects'">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                         <h2 class="section-title" style="margin: 0;">Активные проекты</h2>
-                        <button class="btn-primary" style="width: auto; padding: 12px 24px;" @click="addProject" v-if="currentUser.role === 'ADMIN'">
-                            Новый проект
-                        </button>
+                        <button class="btn-primary" style="width: auto; padding: 12px 24px;" @click="addProject" v-if="currentUser.role === 'ADMIN'">Новый проект</button>
                     </div>
-                    
                     <div class="projects-grid" v-if="projects.length > 0">
                         <div class="project-card" v-for="project in projects" :key="project.id">
                             <div class="project-name">{{ project.name }}</div>
                             <div class="project-balance">{{ formatMoney(project.balance) }} ₽</div>
-                            <button class="btn-small" @click="addBalance(project.id)" v-if="currentUser.role === 'ADMIN'">
-                                + Внести средства
-                            </button>
+                            <button class="btn-small" @click="addBalance(project.id)" v-if="currentUser.role === 'ADMIN'">+ Внести средства</button>
                         </div>
                     </div>
-                    
-                    <div class="empty-state" v-else>
-                        Нет активных проектов
-                    </div>
+                    <div class="empty-state" v-else>Нет активных проектов</div>
                 </div>
                 
-                <!-- Finances Tab -->
+                <!-- Finances -->
                 <div v-if="currentTab === 'finances'">
                     <div class="finance-table">
                         <div class="finance-header">
@@ -695,22 +465,13 @@
                         </div>
                         <table>
                             <thead>
-                                <tr>
-                                    <th>День</th>
-                                    <th>Приход (+)</th>
-                                    <th>Расход (-)</th>
-                                    <th>Комментарий</th>
-                                </tr>
+                                <tr><th>День</th><th>Приход (+)</th><th>Расход (-)</th><th>Комментарий</th></tr>
                             </thead>
                             <tbody>
                                 <tr v-for="finance in finances.slice().reverse()" :key="finance.id">
                                     <td>{{ finance.date }}</td>
-                                    <td style="color: #48bb78; font-weight: 600;">
-                                        {{ finance.amount > 0 ? '+' + formatMoney(finance.amount) : '-' }}
-                                    </td>
-                                    <td style="color: #f56565; font-weight: 600;">
-                                        {{ finance.amount < 0 ? '-' + formatMoney(Math.abs(finance.amount)) : '-' }}
-                                    </td>
+                                    <td style="color: #48bb78; font-weight: 600;">{{ finance.amount > 0 ? '+' + formatMoney(finance.amount) : '-' }}</td>
+                                    <td style="color: #f56565; font-weight: 600;">{{ finance.amount < 0 ? '-' + formatMoney(Math.abs(finance.amount)) : '-' }}</td>
                                     <td>{{ finance.comment }}</td>
                                 </tr>
                             </tbody>
@@ -718,7 +479,7 @@
                     </div>
                 </div>
                 
-                <!-- Reports Tab -->
+                <!-- Reports -->
                 <div v-if="currentTab === 'reports'">
                     <h2 class="section-title">Генерация отчетов</h2>
                     <div class="projects-grid">
@@ -735,10 +496,9 @@
                     </div>
                 </div>
                 
-                <!-- Admin Tab -->
+                <!-- Admin -->
                 <div v-if="currentTab === 'admin' && currentUser.role === 'ADMIN'">
                     <h2 class="section-title">Управление системой</h2>
-                    
                     <div class="admin-stats">
                         <div class="stat-card">
                             <div class="stat-label">Всего пользователей</div>
@@ -748,56 +508,19 @@
                             <div class="stat-label">Сейчас онлайн</div>
                             <div class="stat-value online">{{ onlineUsersCount }}</div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Администраторов</div>
-                            <div class="stat-value">{{ adminsCount }}</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Обычных пользователей</div>
-                            <div class="stat-value">{{ usersCount }}</div>
-                        </div>
                     </div>
-                    
                     <div class="users-table">
                         <table>
                             <thead>
-                                <tr>
-                                    <th>Пользователь</th>
-                                    <th>Логин</th>
-                                    <th>Роль</th>
-                                    <th>Статус</th>
-                                    <th>Последняя активность</th>
-                                    <th>Действия</th>
-                                </tr>
+                                <tr><th>Пользователь</th><th>Логин</th><th>Роль</th><th>Статус</th><th>Действия</th></tr>
                             </thead>
                             <tbody>
                                 <tr v-for="user in allUsers" :key="user.id">
-                                    <td>
-                                        <strong>{{ user.name }}</strong>
-                                    </td>
+                                    <td><strong>{{ user.name }}</strong></td>
                                     <td>{{ user.username }}</td>
-                                    <td>
-                                        <span class="role-badge" :class="user.role === 'ADMIN' ? 'admin' : 'user'">
-                                            {{ user.role === 'ADMIN' ? 'ADMIN' : 'USER' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="status-badge" :class="user.is_online ? 'online' : 'offline'">
-                                            <span class="status-dot"></span>
-                                            {{ user.is_online ? 'Онлайн' : 'Офлайн' }}
-                                        </span>
-                                    </td>
-                                    <td>{{ formatDateTime(user.last_activity) }}</td>
-                                    <td>
-                                        <button class="btn-action btn-make-admin" @click="makeAdmin(user.id)" 
-                                                v-if="user.role !== 'ADMIN' && user.id !== currentUser.id">
-                                            Сделать ADMIN
-                                        </button>
-                                        <button class="btn-action btn-delete" @click="deleteUser(user.id)" 
-                                                v-if="user.id !== currentUser.id">
-                                            Удалить
-                                        </button>
-                                    </td>
+                                    <td><span class="role-badge" :class="user.role === 'ADMIN' ? 'admin' : 'user'">{{ user.role }}</span></td>
+                                    <td><span class="status-badge" :class="user.is_online ? 'online' : 'offline'"><span class="status-dot"></span>{{ user.is_online ? 'Онлайн' : 'Офлайн' }}</span></td>
+                                    <td><button class="btn-action btn-make-admin" @click="makeAdmin(user.id)" v-if="user.role !== 'ADMIN' && user.id !== currentUser.id">Сделать ADMIN</button></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -815,20 +538,15 @@
                 const token = ref(localStorage.getItem('auth_token'));
                 const currentUser = ref(null);
                 const isAuthenticated = ref(false);
-                const authMode = ref('login');
                 const authError = ref('');
                 const authLoading = ref(false);
                 const currentTab = ref('tasks');
                 const syncStatus = ref('');
-                
                 const loginForm = ref({ username: '', password: '' });
-                const registerForm = ref({ name: '', username: '', password: '' });
-                
                 const tasks = ref([]);
                 const projects = ref([]);
                 const finances = ref([]);
                 const allUsers = ref([]);
-                
                 let pollInterval;
 
                 const columns = [
@@ -836,40 +554,24 @@
                     { id: 'doing', title: 'В работе', nextStatus: 'done' },
                     { id: 'done', title: 'Выполнено', nextStatus: 'todo' }
                 ];
-
                 const currentMonth = new Date().toLocaleDateString('ru-RU', { month: 'long' });
 
                 const api = async (method, body = null, action = '') => {
                     const url = `api.php${action ? '?action=' + action : ''}`;
                     const headers = { 'Content-Type': 'application/json' };
                     if (token.value) headers['Authorization'] = 'Bearer ' + token.value;
-                    
                     try {
-                        const res = await fetch(url, {
-                            method,
-                            headers,
-                            body: body ? JSON.stringify(body) : null
-                        });
-                        
-                        if (res.status === 401) {
-                            logout();
-                            return null;
-                        }
-                        
+                        const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : null });
+                        if (res.status === 401) { logout(); return null; }
                         return await res.json();
-                    } catch (e) {
-                        console.error('API Error:', e);
-                        return null;
-                    }
+                    } catch (e) { return null; }
                 };
 
                 const login = async () => {
                     authLoading.value = true;
                     authError.value = '';
-                    
                     const res = await api('POST', loginForm.value, 'login');
                     authLoading.value = false;
-                    
                     if (res && res.token) {
                         token.value = res.token;
                         currentUser.value = res.user;
@@ -877,29 +579,9 @@
                         localStorage.setItem('auth_token', res.token);
                         loadData();
                         loadUsers();
-                        syncStatus.value = '✓ Подключено';
+                        syncStatus.value = '✓';
                     } else {
                         authError.value = res?.error || 'Ошибка входа';
-                    }
-                };
-
-                const register = async () => {
-                    authLoading.value = true;
-                    authError.value = '';
-                    
-                    const res = await api('POST', registerForm.value, 'register');
-                    authLoading.value = false;
-                    
-                    if (res && res.token) {
-                        token.value = res.token;
-                        currentUser.value = res.user;
-                        isAuthenticated.value = true;
-                        localStorage.setItem('auth_token', res.token);
-                        loadData();
-                        loadUsers();
-                        syncStatus.value = '✓ Подключено';
-                    } else {
-                        authError.value = res?.error || 'Ошибка регистрации';
                     }
                 };
 
@@ -909,11 +591,7 @@
                     currentUser.value = null;
                     isAuthenticated.value = false;
                     localStorage.removeItem('auth_token');
-                    tasks.value = [];
-                    projects.value = [];
-                    finances.value = [];
-                    allUsers.value = [];
-                    syncStatus.value = '';
+                    tasks.value = []; projects.value = []; finances.value = []; allUsers.value = [];
                 };
 
                 const loadData = async () => {
@@ -922,231 +600,96 @@
                         tasks.value = data.tasks || [];
                         projects.value = data.projects || [];
                         finances.value = data.finances || [];
-                        syncStatus.value = '✓ Синхронизировано';
+                        syncStatus.value = '✓';
                     }
                 };
 
                 const loadUsers = async () => {
                     if (currentUser.value?.role === 'ADMIN') {
                         const res = await api('GET', null, 'getUsers');
-                        if (res && res.users) {
-                            allUsers.value = res.users;
-                        }
+                        if (res && res.users) allUsers.value = res.users;
                     }
                 };
 
                 const saveData = async () => {
-                    syncStatus.value = '💾 Сохранение...';
-                    await api('POST', {
-                        tasks: tasks.value,
-                        projects: projects.value,
-                        finances: finances.value
-                    });
-                    syncStatus.value = '✓ Сохранено';
+                    syncStatus.value = '💾';
+                    await api('POST', { tasks: tasks.value, projects: projects.value, finances: finances.value });
+                    syncStatus.value = '✓';
                 };
 
-                const getTasksByStatus = (status) => {
-                    return tasks.value.filter(t => t.status === status);
-                };
-
-                const getTasksCount = (status) => {
-                    return getTasksByStatus(status).length;
-                };
+                const getTasksByStatus = (status) => tasks.value.filter(t => t.status === status);
+                const getTasksCount = (status) => getTasksByStatus(status).length;
 
                 const addTask = (status) => {
                     const title = prompt('Название задачи:');
                     if (!title) return;
-                    
-                    const description = prompt('Описание (необязательно):') || '';
-                    
-                    tasks.value.push({
-                        id: Date.now(),
-                        title,
-                        description,
-                        status,
-                        created_by: currentUser.value.name,
-                        created_at: new Date().toISOString()
-                    });
-                    
+                    const description = prompt('Описание:') || '';
+                    tasks.value.push({ id: Date.now(), title, description, status });
                     saveData();
                 };
 
                 const changeTaskStatus = (taskId, newStatus) => {
                     const task = tasks.value.find(t => t.id === taskId);
-                    if (task) {
-                        task.status = newStatus;
-                        saveData();
-                    }
+                    if (task) { task.status = newStatus; saveData(); }
                 };
 
                 const addProject = () => {
                     const name = prompt('Название проекта:');
                     if (!name) return;
-                    
-                    projects.value.push({
-                        id: Date.now(),
-                        name,
-                        balance: 0
-                    });
-                    
+                    projects.value.push({ id: Date.now(), name, balance: 0 });
                     saveData();
                 };
 
                 const addBalance = (projectId) => {
-                    const amount = parseFloat(prompt('Внесите сумму (₽):'));
+                    const amount = parseFloat(prompt('Сумма (₽):'));
                     if (isNaN(amount)) return;
-                    
                     const project = projects.value.find(p => p.id === projectId);
-                    if (project) {
-                        project.balance += amount;
-                        saveData();
-                    }
-                };
-
-                const addFinance = () => {
-                    const amount = parseFloat(prompt('Сумма (положительная - приход, отрицательная - расход):'));
-                    if (isNaN(amount)) return;
-                    
-                    const comment = prompt('Комментарий:') || '';
-                    
-                    finances.value.push({
-                        id: Date.now(),
-                        amount,
-                        comment,
-                        date: new Date().toISOString().split('T')[0],
-                        added_by: currentUser.value.name
-                    });
-                    
-                    saveData();
+                    if (project) { project.balance += amount; saveData(); }
                 };
 
                 const makeAdmin = async (userId) => {
-                    if (!confirm('Сделать этого пользователя администратором?')) return;
-                    
-                    const res = await api('POST', { user_id: userId, role: 'ADMIN' }, 'changeRole');
-                    if (res && res.status === 'ok') {
-                        loadUsers();
-                    }
-                };
-
-                const deleteUser = async (userId) => {
-                    if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) return;
-                    
-                    const res = await api('POST', { user_id: userId }, 'deleteUser');
-                    if (res && res.status === 'ok') {
-                        loadUsers();
-                    }
+                    if (!confirm('Сделать администратором?')) return;
+                    await api('POST', { user_id: userId, role: 'ADMIN' }, 'changeRole');
+                    loadUsers();
                 };
 
                 const downloadReport = (type) => {
-                    let data, filename;
-                    
-                    if (type === 'tasks') {
-                        data = tasks.value;
-                        filename = 'tasks_report.json';
-                    } else {
-                        data = finances.value;
-                        filename = 'finances_report.json';
-                    }
-                    
+                    const data = type === 'tasks' ? tasks.value : finances.value;
                     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = filename;
+                    a.download = type + '_report.json';
                     a.click();
-                    URL.revokeObjectURL(url);
                 };
 
-                const formatMoney = (amount) => {
-                    return parseFloat(amount).toLocaleString('ru-RU');
-                };
-
-                const formatDateTime = (dateStr) => {
-                    const date = new Date(dateStr);
-                    return date.toLocaleString('ru-RU');
-                };
-
-                const totalBalance = computed(() => {
-                    return finances.value.reduce((sum, f) => sum + (parseFloat(f.amount) || 0), 0);
-                });
-
-                const onlineUsersCount = computed(() => {
-                    return allUsers.value.filter(u => u.is_online).length;
-                });
-
-                const adminsCount = computed(() => {
-                    return allUsers.value.filter(u => u.role === 'ADMIN').length;
-                });
-
-                const usersCount = computed(() => {
-                    return allUsers.value.filter(u => u.role === 'USER').length;
-                });
+                const formatMoney = (amount) => parseFloat(amount).toLocaleString('ru-RU');
+                const totalBalance = computed(() => finances.value.reduce((sum, f) => sum + (parseFloat(f.amount) || 0), 0));
+                const onlineUsersCount = computed(() => allUsers.value.filter(u => u.is_online).length);
 
                 onMounted(() => {
                     if (token.value) {
                         api('GET').then(data => {
-                            if (data && data._meta && data._meta.user) {
+                            if (data && data._meta?.user) {
                                 currentUser.value = data._meta.user;
                                 isAuthenticated.value = true;
                                 loadData();
                                 loadUsers();
-                                syncStatus.value = '✓ Подключено';
-                            } else {
-                                logout();
-                            }
+                            } else logout();
                         });
                     }
-                    
                     pollInterval = setInterval(() => {
-                        if (isAuthenticated.value) {
-                            loadData();
-                            if (currentUser.value?.role === 'ADMIN') {
-                                loadUsers();
-                            }
-                        }
+                        if (isAuthenticated.value) { loadData(); if (currentUser.value?.role === 'ADMIN') loadUsers(); }
                     }, 5000);
                 });
 
-                onUnmounted(() => {
-                    clearInterval(pollInterval);
-                });
+                onUnmounted(() => clearInterval(pollInterval));
 
                 return {
-                    isAuthenticated,
-                    authMode,
-                    authError,
-                    authLoading,
-                    loginForm,
-                    registerForm,
-                    currentTab,
-                    currentUser,
-                    syncStatus,
-                    columns,
-                    currentMonth,
-                    tasks,
-                    projects,
-                    finances,
-                    allUsers,
-                    totalBalance,
-                    onlineUsersCount,
-                    adminsCount,
-                    usersCount,
-                    login,
-                    register,
-                    logout,
-                    getTasksByStatus,
-                    getTasksCount,
-                    addTask,
-                    changeTaskStatus,
-                    addProject,
-                    addBalance,
-                    addFinance,
-                    makeAdmin,
-                    deleteUser,
-                    downloadReport,
-                    formatMoney,
-                    formatDateTime
+                    isAuthenticated, authError, authLoading, loginForm, currentTab, currentUser, syncStatus,
+                    columns, currentMonth, tasks, projects, finances, allUsers, totalBalance, onlineUsersCount,
+                    login, logout, getTasksByStatus, getTasksCount, addTask, changeTaskStatus, addProject, addBalance,
+                    makeAdmin, downloadReport, formatMoney
                 };
             }
         }).mount('#app');
