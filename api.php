@@ -14,43 +14,25 @@ if (!file_exists($dataFile)) {
     file_put_contents($dataFile, json_encode([
         'tasks' => [],
         'projects' => [],
-        'finances' => [],
-        'users' => []
+        'finances' => []
     ], JSON_UNESCAPED_UNICODE));
 }
 
 if (!file_exists($authFile)) {
     file_put_contents($authFile, json_encode([
         'users' => [
-            [
-                'id' => 1,
-                'name' => 'Администратор',
-                'username' => 'admin',
-                'password' => password_hash('admin123', PASSWORD_DEFAULT),
-                'role' => 'ADMIN',
-                'created_at' => date('Y-m-d H:i:s'),
-                'last_activity' => date('Y-m-d H:i:s')
-            ]
+            ['id' => 1, 'name' => 'Администратор', 'username' => 'admin', 'password' => password_hash('admin123', PASSWORD_DEFAULT), 'role' => 'ADMIN'],
+            ['id' => 2, 'name' => 'Менеджер', 'username' => 'manager', 'password' => password_hash('123456', PASSWORD_DEFAULT), 'role' => 'USER'],
+            ['id' => 3, 'name' => 'Сотрудник', 'username' => 'user', 'password' => password_hash('123456', PASSWORD_DEFAULT), 'role' => 'USER']
         ],
         'sessions' => []
     ], JSON_UNESCAPED_UNICODE));
 }
 
-function loadAuth() { 
-    return json_decode(file_get_contents(__DIR__ . '/auth.json'), true); 
-}
-
-function saveAuth($data) { 
-    file_put_contents(__DIR__ . '/auth.json', json_encode($data, JSON_UNESCAPED_UNICODE)); 
-}
-
-function loadData() { 
-    return json_decode(file_get_contents(__DIR__ . '/data.json'), true); 
-}
-
-function saveData($data) { 
-    file_put_contents(__DIR__ . '/data.json', json_encode($data, JSON_UNESCAPED_UNICODE)); 
-}
+function loadAuth() { return json_decode(file_get_contents(__DIR__ . '/auth.json'), true); }
+function saveAuth($data) { file_put_contents(__DIR__ . '/auth.json', json_encode($data, JSON_UNESCAPED_UNICODE)); }
+function loadData() { return json_decode(file_get_contents(__DIR__ . '/data.json'), true); }
+function saveData($data) { file_put_contents(__DIR__ . '/data.json', json_encode($data, JSON_UNESCAPED_UNICODE)); }
 
 function getCurrentUser() {
     $auth = loadAuth();
@@ -59,25 +41,17 @@ function getCurrentUser() {
     if (preg_match('/^Bearer (.+)$/', $authHeader, $m)) {
         $token = $m[1];
         $now = time();
-        $currentTime = date('Y-m-d H:i:s');
         
         foreach ($auth['sessions'] as $i => $s) {
             $sessionTime = strtotime($s['last_activity']);
             $isExpired = ($now - $sessionTime) > 1800;
             
             if ($s['token'] === $token && !$isExpired) {
-                $auth['sessions'][$i]['last_activity'] = $currentTime;
+                $auth['sessions'][$i]['last_activity'] = date('Y-m-d H:i:s');
                 saveAuth($auth);
                 
                 foreach ($auth['users'] as $u) {
                     if ($u['id'] === $s['user_id']) {
-                        foreach ($auth['users'] as &$user) {
-                            if ($user['id'] === $u['id']) {
-                                $user['last_activity'] = $currentTime;
-                                break;
-                            }
-                        }
-                        saveAuth($auth);
                         return ['id'=>$u['id'], 'name'=>$u['name'], 'username'=>$u['username'], 'role'=>$u['role']];
                     }
                 }
@@ -93,60 +67,6 @@ function getCurrentUser() {
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $raw = file_get_contents('php://input');
 $input = json_decode($raw, true) ?: [];
-
-// РЕГИСТРАЦИЯ - ИСПРАВЛЕНО
-if ($action === 'register') {
-    $auth = loadAuth();
-    
-    // Проверка существования username
-    foreach ($auth['users'] as $u) {
-        if ($u['username'] === $input['username']) {
-            http_response_code(409);
-            echo json_encode(['error' => 'Пользователь с таким логином уже существует']);
-            exit;
-        }
-    }
-    
-    // Проверка имени
-    if (empty($input['name']) || empty($input['username']) || empty($input['password'])) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Все поля обязательны для заполнения']);
-        exit;
-    }
-    
-    $newUser = [
-        'id' => count($auth['users']) + 1,
-        'name' => trim($input['name']),
-        'username' => trim($input['username']),
-        'password' => password_hash($input['password'], PASSWORD_DEFAULT),
-        'role' => 'USER',
-        'created_at' => date('Y-m-d H:i:s'),
-        'last_activity' => date('Y-m-d H:i:s')
-    ];
-    
-    $auth['users'][] = $newUser;
-    saveAuth($auth);
-    
-    $token = bin2hex(random_bytes(32));
-    $auth['sessions'][] = [
-        'user_id' => $newUser['id'],
-        'token' => $token,
-        'created' => date('Y-m-d H:i:s'),
-        'last_activity' => date('Y-m-d H:i:s')
-    ];
-    saveAuth($auth);
-    
-    echo json_encode([
-        'token' => $token,
-        'user' => [
-            'id' => $newUser['id'],
-            'name' => $newUser['name'],
-            'username' => $newUser['username'],
-            'role' => $newUser['role']
-        ]
-    ]);
-    exit;
-}
 
 // ВХОД
 if ($action === 'login') {
@@ -215,7 +135,7 @@ if ($action === 'getUsers') {
     $now = time();
     
     $usersWithStatus = array_map(function($u) use ($now) {
-        $lastActivity = strtotime($u['last_activity']);
+        $lastActivity = strtotime($u['last_activity'] ?? 0);
         $isOnline = ($now - $lastActivity) < 300;
         
         return [
@@ -223,8 +143,6 @@ if ($action === 'getUsers') {
             'name' => $u['name'],
             'username' => $u['username'],
             'role' => $u['role'],
-            'created_at' => $u['created_at'],
-            'last_activity' => $u['last_activity'],
             'is_online' => $isOnline
         ];
     }, $auth['users']);
@@ -243,43 +161,13 @@ if ($action === 'changeRole') {
     }
     
     $auth = loadAuth();
-    $targetId = $input['user_id'];
-    $newRole = $input['role'];
-    
     foreach ($auth['users'] as &$user) {
-        if ($user['id'] == $targetId) {
-            $user['role'] = $newRole;
+        if ($user['id'] == $input['user_id']) {
+            $user['role'] = $input['role'];
             break;
         }
     }
     saveAuth($auth);
-    
-    echo json_encode(['status' => 'ok']);
-    exit;
-}
-
-// УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
-if ($action === 'deleteUser') {
-    $currentUser = getCurrentUser();
-    if (!$currentUser || $currentUser['role'] !== 'ADMIN') {
-        http_response_code(403);
-        echo json_encode(['error' => 'Доступ запрещен']);
-        exit;
-    }
-    
-    $auth = loadAuth();
-    $targetId = $input['user_id'];
-    
-    if ($targetId == $currentUser['id']) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Нельзя удалить себя']);
-        exit;
-    }
-    
-    $auth['users'] = array_values(array_filter($auth['users'], fn($u) => $u['id'] != $targetId));
-    $auth['sessions'] = array_filter($auth['sessions'], fn($s) => $s['user_id'] != $targetId);
-    saveAuth($auth);
-    
     echo json_encode(['status' => 'ok']);
     exit;
 }
@@ -292,13 +180,14 @@ if (!$currentUser) {
     exit;
 }
 
-// GET - получение данных
+// GET - получение ОБЩИХ данных
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $data = loadData();
     $data['_meta'] = ['user' => $currentUser];
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Сохранение ОБЩИХ данных
     saveData($input);
     echo json_encode(['status' => 'ok', 'user' => $currentUser]);
 }
