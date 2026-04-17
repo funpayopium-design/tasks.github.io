@@ -3,647 +3,620 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>База данных изображений</title>
+    <title>Бизнес Управление</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        [v-cloak] { display: none; }
+        .drag-ghost { opacity: 0.2; background: #94a3b8 !important; }
+        
+        .main-gradient {
+            background: linear-gradient(to bottom, #3f3f3f 0%, #ffffff 100%);
+            min-height: calc(100vh - 65px);
+            background-attachment: fixed;
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+        .column-box {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border-radius: 2rem;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+        .task-card {
+            cursor: grab;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid #e2e8f0;
+            border-radius: 1.5rem;
             background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
-
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .db-status {
-            display: inline-block;
-            padding: 5px 15px;
-            background: #4CAF50;
-            color: white;
-            border-radius: 20px;
-            font-size: 14px;
-            margin-left: 15px;
-        }
-
-        .upload-section {
-            background: #f5f5f5;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-        }
-
-        input[type="text"], textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-
-        input[type="text"]:focus, textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        input[type="file"] {
-            padding: 12px;
-            border: 2px dashed #ddd;
-            border-radius: 8px;
-            width: 100%;
-            cursor: pointer;
-        }
-
-        .preview {
-            margin-top: 15px;
-            max-width: 300px;
-        }
-
-        .preview img {
-            max-width: 100%;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .btn {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.3s;
-            margin-right: 10px;
-        }
-
-        .btn:hover {
-            background: #5a67d8;
-        }
-
-        .btn-danger {
-            background: #e53e3e;
-        }
-
-        .btn-danger:hover {
-            background: #c53030;
-        }
-
-        .btn-success {
-            background: #48bb78;
-        }
-
-        .btn-success:hover {
-            background: #38a169;
-        }
-
-        .gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 25px;
-            margin-top: 30px;
-        }
-
-        .image-card {
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-
-        .image-card:hover {
+        .task-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
         }
 
-        .image-card img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
+        .no-drag { pointer-events: none; opacity: 0.7; cursor: default !important; }
+        /* Разрешаем клики по кнопке удаления даже в no-drag */
+        .no-drag .delete-btn { pointer-events: auto; cursor: pointer; }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
+        
+        .modal-animation {
+            animation: modalFade 0.2s ease;
         }
-
-        .card-content {
-            padding: 15px;
-        }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #333;
-        }
-
-        .card-description {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 15px;
-            line-height: 1.5;
-        }
-
-        .card-meta {
-            font-size: 12px;
-            color: #999;
-            margin-bottom: 15px;
-        }
-
-        .card-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .stats {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 10px;
-        }
-
-        .stat-item {
-            flex: 1;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 28px;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .stat-label {
-            color: #666;
-            font-size: 14px;
-            margin-top: 5px;
-        }
-
-        .search-bar {
-            margin-bottom: 20px;
-        }
-
-        .search-bar input {
-            width: 100%;
-            padding: 12px 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 25px;
-            font-size: 16px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #999;
-        }
-
-        .empty-state svg {
-            width: 100px;
-            height: 100px;
-            margin-bottom: 20px;
-            opacity: 0.5;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-            
-            h1 {
-                font-size: 1.8em;
-            }
-            
-            .gallery {
-                grid-template-columns: 1fr;
-            }
+        
+        @keyframes modalFade {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>
-            📸 База данных изображений
-            <span class="db-status" id="dbStatus">Подключено</span>
-        </h1>
-
-        <div class="stats" id="stats">
-            <div class="stat-item">
-                <div class="stat-value" id="totalImages">0</div>
-                <div class="stat-label">Всего изображений</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="totalSize">0 MB</div>
-                <div class="stat-label">Общий размер</div>
-            </div>
-        </div>
-
-        <div class="search-bar">
-            <input type="text" id="searchInput" placeholder="🔍 Поиск по названию или описанию...">
-        </div>
-
-        <div class="upload-section">
-            <h2 style="margin-bottom: 20px;">📤 Загрузить новое изображение</h2>
-            
-            <div class="form-group">
-                <label>Выберите файл:</label>
-                <input type="file" id="imageInput" accept="image/*">
-            </div>
-
-            <div class="preview" id="preview" style="display: none;">
-                <img id="previewImage" src="" alt="Preview">
-            </div>
-
-            <div class="form-group">
-                <label>Название:</label>
-                <input type="text" id="imageTitle" placeholder="Введите название изображения">
-            </div>
-
-            <div class="form-group">
-                <label>Описание:</label>
-                <textarea id="imageDescription" rows="3" placeholder="Введите описание (необязательно)"></textarea>
-            </div>
-
-            <button class="btn" onclick="uploadImage()">📸 Загрузить в базу данных</button>
-            <button class="btn btn-success" onclick="exportDatabase()">📦 Экспорт БД</button>
-            <button class="btn btn-danger" onclick="clearDatabase()">🗑️ Очистить БД</button>
-        </div>
-
-        <h2 style="margin-bottom: 20px;">🖼️ Галерея изображений</h2>
+<body class="font-sans antialiased">
+    <div id="app" v-cloak class="min-h-screen flex flex-col">
         
-        <div class="gallery" id="gallery">
-            <div class="empty-state">
-                <div style="font-size: 60px; margin-bottom: 20px;">📭</div>
-                <h3>База данных пуста</h3>
-                <p style="margin-top: 10px;">Загрузите первое изображение!</p>
+        <header class="bg-[#f3f4f6] border-b border-gray-300 sticky top-0 z-[100] shadow-md h-[65px] flex items-center">
+            <div class="container mx-auto px-6 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="bg-gray-800 p-2 rounded-xl text-white">
+                        <i data-lucide="layout-grid" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-xl font-black tracking-tighter text-gray-700 uppercase italic">tasks</span>
+                </div>
+                <nav class="hidden md:flex gap-8 font-black text-[10px] uppercase tracking-widest">
+                    <button @click="currentTab = 'tasks'" :class="navClass(currentTab === 'tasks')">Задачи</button>
+                    <button v-if="isAdmin" @click="currentTab = 'projects'" :class="navClass(currentTab === 'projects')">Проекты</button>
+                    <button v-if="isAdmin" @click="currentTab = 'finance'" :class="navClass(currentTab === 'finance')">Финансы</button>
+                    <button v-if="isAdmin" @click="currentTab = 'reports'" :class="navClass(currentTab === 'reports')">Отчеты</button>
+                    <button @click="currentTab = 'admin'" :class="navClass(currentTab === 'admin')" class="text-indigo-600">Админ</button>
+                </nav>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-black text-gray-500 uppercase px-3 py-1 bg-white/50 rounded-full">{{ currentUser ? currentUser.name : 'GUEST' }} ({{ currentUser ? currentUser.role : 'USER' }})</span>
+                    <a href="#" class="bg-gray-800 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-black transition flex items-center gap-2">
+                        Поддержка <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-gradient flex-grow py-10">
+            <div class="container mx-auto px-6">
+                
+                <!-- ЗАДАЧИ -->
+                <div v-if="currentTab === 'tasks'">
+                    <h1 class="text-4xl font-black text-white uppercase italic mb-10 drop-shadow-2xl">Задачи на месяц: Апрель</h1>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+                        <div v-for="col in ['todo', 'doing', 'done']" :key="col" class="flex flex-col gap-5">
+                            <div class="bg-white/20 backdrop-blur-md p-5 rounded-3xl border border-white/30 shadow-2xl flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-3 h-3 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)]" :class="statusDot(col)"></span>
+                                    <h3 class="text-white text-xs font-black uppercase tracking-widest">
+                                        {{ col === 'todo' ? 'В очереди' : col === 'doing' ? 'В работе' : 'Выполнено' }}
+                                    </h3>
+                                </div>
+                                <button v-if="col === 'todo' && isAdmin" @click="openTaskModal(col)" class="text-white hover:scale-110 transition">
+                                    <i data-lucide="plus-square" class="w-6 h-6"></i>
+                                </button>
+                            </div>
+                            
+                            <div :ref="col + 'Col'" :data-status="col" class="column-box p-5 min-h-[600px] space-y-5">
+                                <div v-for="task in getTasksByStatus(col)" 
+                                     :key="task.id" 
+                                     :data-id="task.id" 
+                                     :class="['task-card p-6 relative group', col === 'done' ? 'no-drag grayscale' : '']">
+                                    
+                                    <!-- Кнопка удаления теперь отображается и для завершённых -->
+                                    <button v-if="isAdmin" @click="deleteTask(task.id)" class="delete-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition z-10">
+                                        <i data-lucide="x" class="w-4 h-4"></i>
+                                    </button>
+                                    
+                                    <h4 class="font-black text-gray-800 uppercase text-sm mb-3 tracking-tight pr-6">{{ task.title }}</h4>
+                                    <p class="text-xs text-gray-500 font-medium leading-relaxed mb-4">{{ task.description || 'Нет описания' }}</p>
+                                    <div v-if="col === 'done'" class="flex items-center gap-2 text-[10px] font-black text-green-600 uppercase italic">
+                                        <i data-lucide="check-circle" class="w-3 h-3"></i> Завершено
+                                    </div>
+                                </div>
+                                <div v-if="getTasksByStatus(col).length === 0" class="text-center py-10 text-white/50 text-sm italic">
+                                    Нет задач
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ПРОЕКТЫ -->
+                <div v-if="currentTab === 'projects' && isAdmin">
+                    <div class="flex justify-between items-center mb-12">
+                        <h2 class="text-3xl font-black uppercase italic text-white drop-shadow-xl">Активные проекты</h2>
+                        <button @click="showProjectModal = true" class="bg-white text-gray-900 px-8 py-3 rounded-2xl font-black text-xs uppercase shadow-2xl hover:bg-gray-100 transition">Новый проект</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+                        <div v-for="project in projects" :key="project.id" class="bg-white p-8 rounded-[3rem] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] border border-gray-100 relative group transition-all">
+                            <button @click="deleteProject(project.id)" class="absolute top-8 right-8 text-gray-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                            <div class="bg-gray-100 w-16 h-16 rounded-3xl flex items-center justify-center mb-8 text-gray-500 shadow-inner">
+                                <i data-lucide="box" class="w-8 h-8"></i>
+                            </div>
+                            <h3 class="font-black uppercase text-2xl text-gray-800 mb-6 tracking-tighter">{{ project.name }}</h3>
+                            <div class="bg-gray-50 p-6 rounded-[2rem] border border-gray-200 shadow-inner">
+                                <label class="text-[10px] font-black text-gray-400 uppercase block mb-2 tracking-[0.2em] italic">Баланс проекта (₽)</label>
+                                <input type="number" v-model.number="project.balance" class="w-full bg-transparent text-3xl font-mono font-black text-indigo-600 outline-none">
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="projects.length === 0" class="text-center py-20"><p class="text-white/50 text-lg italic">Нет активных проектов</p></div>
+                </div>
+
+                <!-- ФИНАНСЫ -->
+                <div v-if="currentTab === 'finance' && isAdmin">
+                    <div class="bg-white rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden border border-gray-200">
+                        <div class="p-10 bg-gray-50 border-b flex justify-between items-center">
+                            <h2 class="text-2xl font-black italic uppercase text-gray-800">Финансовый лог</h2>
+                            <div class="text-right">
+                                <span class="text-xs font-black text-gray-400 uppercase tracking-widest italic block mb-2">Общая прибыль</span>
+                                <div :class="totalBalance >= 0 ? 'text-green-600' : 'text-red-600'" class="text-5xl font-mono font-black tracking-tighter italic">{{ totalBalance.toLocaleString() }} ₽</div>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="bg-gray-900 text-gray-400 text-[10px] font-black uppercase tracking-widest italic">
+                                    <tr><th class="p-8 text-center w-24">День</th><th class="p-8">Приход (+)</th><th class="p-8">Расход (-)</th><th class="p-8">Комментарий</th></tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 font-bold italic text-sm">
+                                    <tr v-for="day in 31" :key="day" class="hover:bg-gray-50 transition">
+                                        <td class="p-6 bg-gray-50 text-center font-black text-gray-300 border-r border-gray-100">{{ day }}</td>
+                                        <td class="p-6 text-green-600"><input type="number" v-model.number="financeData[day-1].income" class="w-full bg-transparent outline-none focus:bg-white p-2 rounded-xl transition" placeholder="0"></td>
+                                        <td class="p-6 text-red-500"><input type="number" v-model.number="financeData[day-1].expense" class="w-full bg-transparent outline-none focus:bg-white p-2 rounded-xl transition" placeholder="0"></td>
+                                        <td class="p-6"><input type="text" v-model="financeData[day-1].note" class="w-full bg-transparent outline-none text-gray-400" placeholder="..."></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- АДМИН -->
+                <div v-if="currentTab === 'admin'">
+                    <div v-if="!adminAuth" class="max-w-md mx-auto mt-20">
+                        <div class="bg-white p-12 rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] border border-gray-200 text-center">
+                            <h2 class="text-gray-800 font-black uppercase tracking-[0.3em] mb-10 italic">Access Code</h2>
+                            <input type="password" v-model="adminPassInput" @keyup.enter="checkAdminPass" placeholder="••••••••" class="w-full bg-gray-50 border-2 border-gray-100 p-6 rounded-3xl text-center mb-8 outline-none focus:border-indigo-500 transition shadow-inner text-2xl tracking-widest">
+                            <button @click="checkAdminPass" class="w-full bg-gray-900 text-white py-6 rounded-3xl font-black uppercase tracking-widest hover:bg-black transition shadow-2xl">Authorize</button>
+                        </div>
+                    </div>
+                    <div v-else>
+                        <div class="flex justify-between items-center mb-10">
+                            <h2 class="text-3xl font-black uppercase italic text-white drop-shadow-xl">Управление системой</h2>
+                            <button @click="adminAuth = false" class="text-xs font-black text-red-400 uppercase tracking-widest underline decoration-2">Завершить сессию</button>
+                        </div>
+                        <div class="bg-white rounded-[3rem] shadow-2xl border border-gray-200 overflow-hidden mb-8">
+                            <div class="p-8 border-b bg-gray-50/50"><h3 class="font-black uppercase text-sm text-gray-400 tracking-widest">Текущий пользователь</h3></div>
+                            <div class="p-6 flex justify-between items-center">
+                                <div><span class="text-2xl font-black">{{ currentUser.name }}</span><span class="ml-3 px-3 py-1 rounded-full text-xs font-black" :class="currentUser.role === 'ADMIN' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'">{{ currentUser.role }}</span></div>
+                                <button v-if="currentUser.role !== 'ADMIN'" @click="makeAdmin(currentUser.id)" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold">Сделать ADMIN</button>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-[3rem] shadow-2xl border border-gray-200 overflow-hidden mb-8">
+                            <div class="p-8 border-b bg-gray-50/50"><h3 class="font-black uppercase text-sm text-gray-400 tracking-widest">Переключиться на пользователя</h3></div>
+                            <div class="p-6">
+                                <select v-model="selectedUserId" class="w-full p-4 rounded-2xl border-2 border-gray-200 font-bold outline-none focus:border-indigo-500">
+                                    <option v-for="user in users" :key="user.id" :value="user.id">{{ user.name }} ({{ user.role }})</option>
+                                </select>
+                                <button @click="switchUser" class="mt-4 w-full bg-gray-800 text-white py-3 rounded-xl font-bold text-sm hover:bg-black transition">Переключиться</button>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-[3rem] shadow-2xl border border-gray-200 overflow-hidden italic">
+                            <div class="p-10 border-b flex justify-between items-center bg-gray-50/50">
+                                <h3 class="font-black uppercase text-sm text-gray-400 tracking-widest">База пользователей</h3>
+                                <button @click="addUser" class="bg-gray-900 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">+ Добавить</button>
+                            </div>
+                            <div class="divide-y divide-gray-100">
+                                <div v-for="user in users" :key="user.id" class="p-8 flex items-center justify-between hover:bg-gray-50 transition">
+                                    <div class="flex items-center gap-6">
+                                        <div class="w-14 h-14 bg-gray-900 text-white rounded-2xl flex items-center justify-center font-black text-xl italic shadow-xl">{{ user.name.charAt(0) }}</div>
+                                        <div><div class="font-black uppercase text-gray-800 tracking-tight">{{ user.name }}</div><div class="text-[10px] text-indigo-500 font-black uppercase tracking-widest">{{ user.role }}</div></div>
+                                    </div>
+                                    <div class="flex gap-3">
+                                        <button v-if="user.role !== 'ADMIN'" @click="makeAdmin(user.id)" class="text-blue-400 hover:text-blue-600 transition text-xs font-bold">Сделать ADMIN</button>
+                                        <button @click="deleteUser(user.id)" class="text-red-200 hover:text-red-500 transition"><i data-lucide="x-circle" class="w-6 h-6"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ОТЧЕТЫ -->
+                <div v-if="currentTab === 'reports' && isAdmin" class="max-w-2xl mx-auto py-10">
+                    <div class="bg-white p-12 rounded-[4rem] shadow-2xl text-center border-t-[15px] border-gray-900">
+                        <div class="w-24 h-24 bg-gray-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 text-gray-300 shadow-inner"><i data-lucide="cloud-download" class="w-12 h-12"></i></div>
+                        <h2 class="text-3xl font-black mb-12 uppercase italic text-gray-800 tracking-tighter">Генерация отчетов</h2>
+                        <div class="space-y-6">
+                            <button @click="downloadReport('tasks')" class="w-full p-8 bg-gray-900 text-white rounded-3xl font-black uppercase text-xs tracking-widest hover:bg-black transition shadow-2xl flex justify-between items-center">Скачать задачи <i data-lucide="download" class="w-5 h-5"></i></button>
+                            <button @click="downloadReport('finance')" class="w-full p-8 bg-white border-2 border-gray-900 rounded-3xl font-black uppercase text-xs tracking-widest hover:bg-gray-50 transition shadow-2xl flex justify-between items-center">Скачать финансы <i data-lucide="download" class="w-5 h-5"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- МОДАЛКИ -->
+        <div v-if="showTaskModal" class="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-[200] p-4" @click.self="showTaskModal = false">
+            <div class="bg-white w-full max-w-lg rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] overflow-hidden border border-gray-100 modal-animation">
+                <div class="p-10 border-b flex justify-between items-center bg-gray-50/50">
+                    <h3 class="font-black uppercase italic tracking-widest text-gray-400 text-xs">НОВАЯ ЗАПИСЬ</h3>
+                    <button @click="showTaskModal = false" class="text-gray-300 hover:text-red-500 transition"><i data-lucide="x" class="w-6 h-6"></i></button>
+                </div>
+                <div class="p-12 space-y-10">
+                    <input type="text" v-model="newTask.title" placeholder="НАЗВАНИЕ" class="w-full border-b-4 border-gray-100 p-4 font-black uppercase outline-none focus:border-indigo-500 transition text-xl bg-transparent">
+                    <textarea v-model="newTask.description" placeholder="ДЕТАЛИ..." class="w-full border-b-4 border-gray-100 p-4 h-40 outline-none focus:border-indigo-500 transition text-sm font-medium bg-transparent"></textarea>
+                    <button @click="saveTask" class="w-full bg-gray-900 text-white py-7 rounded-[2rem] font-black uppercase tracking-[0.2em] hover:bg-black transition shadow-2xl text-sm">CONFIRM AND SAVE</button>
+                </div>
             </div>
         </div>
+
+        <div v-if="showProjectModal" class="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-[200] p-4" @click.self="showProjectModal = false">
+            <div class="bg-white w-full max-w-md rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] overflow-hidden border border-gray-100 modal-animation">
+                <div class="p-10 border-b flex justify-between items-center bg-gray-50/50">
+                    <h3 class="font-black uppercase italic tracking-widest text-gray-400 text-xs">PROJECT INITIALIZATION</h3>
+                    <button @click="showProjectModal = false" class="text-gray-300 hover:text-red-500 transition"><i data-lucide="x" class="w-6 h-6"></i></button>
+                </div>
+                <div class="p-12 space-y-10">
+                    <input type="text" v-model="newProject.name" placeholder="НАЗВАНИЕ ПРОЕКТА" class="w-full border-b-4 border-gray-100 p-4 font-black uppercase outline-none focus:border-indigo-500 transition text-xl bg-transparent">
+                    <input type="number" v-model.number="newProject.balance" placeholder="НАЧАЛЬНЫЙ БЮДЖЕТ" class="w-full border-b-4 border-gray-100 p-4 font-black uppercase outline-none focus:border-indigo-500 transition text-xl bg-transparent">
+                    <button @click="saveProject" class="w-full bg-gray-900 text-white py-7 rounded-[2rem] font-black uppercase tracking-[0.2em] hover:bg-black transition shadow-2xl text-sm">LAUNCH PROJECT</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // Конфигурация базы данных IndexedDB
-        const DB_NAME = 'ImageDatabase';
-        const DB_VERSION = 1;
-        const STORE_NAME = 'images';
-        
-        let db = null;
+        const { createApp, nextTick } = Vue
 
-        // Инициализация базы данных
-        function initDatabase() {
+        // Инициализация IndexedDB
+        let db;
+        const DB_NAME = 'BusinessManagementDB';
+        const DB_VERSION = 1;
+        
+        function initDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-                request.onerror = () => {
-                    console.error('Ошибка открытия БД:', request.error);
-                    document.getElementById('dbStatus').textContent = 'Ошибка';
-                    document.getElementById('dbStatus').style.background = '#e53e3e';
-                    reject(request.error);
-                };
-
+                
+                request.onerror = () => reject(request.error);
                 request.onsuccess = () => {
                     db = request.result;
-                    console.log('База данных открыта успешно');
-                    document.getElementById('dbStatus').textContent = 'Активна';
-                    document.getElementById('dbStatus').style.background = '#48bb78';
-                    loadImages();
-                    updateStats();
                     resolve(db);
                 };
-
+                
                 request.onupgradeneeded = (event) => {
                     const db = event.target.result;
                     
-                    // Создаем хранилище объектов
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        const store = db.createObjectStore(STORE_NAME, { 
-                            keyPath: 'id', 
-                            autoIncrement: true 
-                        });
-                        
-                        // Создаем индексы для поиска
-                        store.createIndex('title', 'title', { unique: false });
-                        store.createIndex('timestamp', 'timestamp', { unique: false });
-                        
-                        console.log('Хранилище создано');
+                    if (!db.objectStoreNames.contains('tasks')) {
+                        db.createObjectStore('tasks', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('projects')) {
+                        db.createObjectStore('projects', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('finance')) {
+                        db.createObjectStore('finance', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('users')) {
+                        db.createObjectStore('users', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('currentUser')) {
+                        db.createObjectStore('currentUser', { keyPath: 'id' });
                     }
                 };
             });
         }
-
-        // Загрузка изображения
-        function uploadImage() {
-            const fileInput = document.getElementById('imageInput');
-            const titleInput = document.getElementById('imageTitle');
-            const descriptionInput = document.getElementById('imageDescription');
-            
-            const file = fileInput.files[0];
-            
-            if (!file) {
-                alert('Пожалуйста, выберите изображение');
-                return;
-            }
-            
-            if (!titleInput.value.trim()) {
-                alert('Пожалуйста, введите название');
-                return;
-            }
-            
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                const imageData = {
-                    title: titleInput.value.trim(),
-                    description: descriptionInput.value.trim(),
-                    data: e.target.result,
-                    size: file.size,
-                    type: file.type,
-                    timestamp: new Date().toISOString()
-                };
-                
-                saveToDatabase(imageData);
-            };
-            
-            reader.readAsDataURL(file);
+        
+        function saveToDB(storeName, data) {
+            if (!db) return;
+            const transaction = db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            store.put(data);
         }
-
-        // Сохранение в базу данных
-        function saveToDatabase(imageData) {
-            const transaction = db.transaction([STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            
-            const request = store.add(imageData);
-            
-            request.onsuccess = () => {
-                console.log('Изображение сохранено в БД');
-                
-                // Очищаем форму
-                document.getElementById('imageInput').value = '';
-                document.getElementById('imageTitle').value = '';
-                document.getElementById('imageDescription').value = '';
-                document.getElementById('preview').style.display = 'none';
-                
-                // Обновляем галерею
-                loadImages();
-                updateStats();
-                
-                alert('✅ Изображение успешно сохранено в базу данных!');
-            };
-            
-            request.onerror = () => {
-                console.error('Ошибка сохранения:', request.error);
-                alert('❌ Ошибка при сохранении в базу данных');
-            };
+        
+        function deleteFromDB(storeName, id) {
+            if (!db) return;
+            const transaction = db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            store.delete(id);
         }
-
-        // Загрузка всех изображений
-        function loadImages(searchTerm = '') {
-            const transaction = db.transaction([STORE_NAME], 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            
-            const request = store.getAll();
-            
-            request.onsuccess = () => {
-                let images = request.result;
-                
-                // Фильтрация по поиску
-                if (searchTerm) {
-                    const term = searchTerm.toLowerCase();
-                    images = images.filter(img => 
-                        img.title.toLowerCase().includes(term) || 
-                        img.description.toLowerCase().includes(term)
-                    );
+        
+        function saveAllToDB(storeName, items) {
+            if (!db) return;
+            const transaction = db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            store.clear();
+            items.forEach(item => store.put(item));
+        }
+        
+        function loadFromDB(storeName) {
+            return new Promise((resolve) => {
+                if (!db) {
+                    resolve([]);
+                    return;
                 }
-                
-                // Сортировка по дате (новые сначала)
-                images.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                
-                displayGallery(images);
-            };
-            
-            request.onerror = () => {
-                console.error('Ошибка загрузки:', request.error);
-            };
-        }
-
-        // Отображение галереи
-        function displayGallery(images) {
-            const gallery = document.getElementById('gallery');
-            
-            if (images.length === 0) {
-                gallery.innerHTML = `
-                    <div class="empty-state">
-                        <div style="font-size: 60px; margin-bottom: 20px;">📭</div>
-                        <h3>Изображения не найдены</h3>
-                        <p style="margin-top: 10px;">${document.getElementById('searchInput').value ? 'Попробуйте изменить поисковый запрос' : 'Загрузите первое изображение!'}</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            gallery.innerHTML = images.map(image => `
-                <div class="image-card">
-                    <img src="${image.data}" alt="${image.title}">
-                    <div class="card-content">
-                        <div class="card-title">${escapeHtml(image.title)}</div>
-                        <div class="card-description">${escapeHtml(image.description || 'Нет описания')}</div>
-                        <div class="card-meta">
-                            📅 ${new Date(image.timestamp).toLocaleDateString('ru-RU')} 
-                            📦 ${formatFileSize(image.size)}
-                        </div>
-                        <div class="card-actions">
-                            <button class="btn btn-small" onclick="downloadImage(${image.id})">💾 Скачать</button>
-                            <button class="btn btn-small btn-danger" onclick="deleteImage(${image.id})">🗑️ Удалить</button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Удаление изображения
-        function deleteImage(id) {
-            if (!confirm('Вы уверены, что хотите удалить это изображение из базы данных?')) {
-                return;
-            }
-            
-            const transaction = db.transaction([STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            
-            const request = store.delete(id);
-            
-            request.onsuccess = () => {
-                console.log('Изображение удалено из БД');
-                loadImages();
-                updateStats();
-            };
-            
-            request.onerror = () => {
-                console.error('Ошибка удаления:', request.error);
-                alert('❌ Ошибка при удалении из базы данных');
-            };
-        }
-
-        // Скачивание изображения
-        function downloadImage(id) {
-            const transaction = db.transaction([STORE_NAME], 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            
-            const request = store.get(id);
-            
-            request.onsuccess = () => {
-                const image = request.result;
-                
-                const link = document.createElement('a');
-                link.href = image.data;
-                link.download = `${image.title}.${image.type.split('/')[1]}`;
-                link.click();
-            };
-        }
-
-        // Обновление статистики
-        function updateStats() {
-            const transaction = db.transaction([STORE_NAME], 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            
-            const request = store.getAll();
-            
-            request.onsuccess = () => {
-                const images = request.result;
-                const totalSize = images.reduce((sum, img) => sum + (img.size || 0), 0);
-                
-                document.getElementById('totalImages').textContent = images.length;
-                document.getElementById('totalSize').textContent = formatFileSize(totalSize);
-            };
-        }
-
-        // Экспорт базы данных
-        function exportDatabase() {
-            const transaction = db.transaction([STORE_NAME], 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            
-            const request = store.getAll();
-            
-            request.onsuccess = () => {
-                const data = {
-                    exportDate: new Date().toISOString(),
-                    images: request.result
-                };
-                
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `database_export_${Date.now()}.json`;
-                link.click();
-                URL.revokeObjectURL(url);
-                
-                alert('✅ База данных экспортирована!');
-            };
-        }
-
-        // Очистка базы данных
-        function clearDatabase() {
-            if (!confirm('⚠️ ВНИМАНИЕ! Все изображения будут удалены из базы данных. Это действие нельзя отменить. Продолжить?')) {
-                return;
-            }
-            
-            const transaction = db.transaction([STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            
-            const request = store.clear();
-            
-            request.onsuccess = () => {
-                console.log('База данных очищена');
-                loadImages();
-                updateStats();
-                alert('✅ База данных очищена');
-            };
-            
-            request.onerror = () => {
-                console.error('Ошибка очистки:', request.error);
-                alert('❌ Ошибка при очистке базы данных');
-            };
-        }
-
-        // Вспомогательные функции
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Предпросмотр изображения
-        document.getElementById('imageInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('previewImage').src = e.target.result;
-                    document.getElementById('preview').style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        // Поиск
-        let searchTimeout;
-        document.getElementById('searchInput').addEventListener('input', function(e) {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                loadImages(e.target.value);
-            }, 300);
-        });
-
-        // Инициализация при загрузке страницы
-        window.addEventListener('load', () => {
-            initDatabase().catch(error => {
-                console.error('Ошибка инициализации БД:', error);
-                alert('❌ Не удалось инициализировать базу данных');
+                const transaction = db.transaction([storeName], 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => resolve([]);
             });
-        });
-    </script>
-</body>
-</html>
+        }
+
+        createApp({
+            data() {
+                return {
+                    currentTab: 'tasks',
+                    tasks: [],
+                    projects: [],
+                    financeData: [],
+                    users: [],
+                    currentUser: null,
+                    selectedUserId: null,
+                    adminAuth: false,
+                    adminPassInput: '',
+                    correctPass: '01232013',
+                    showTaskModal: false,
+                    showProjectModal: false,
+                    newTask: { title: '', description: '', status: 'todo' },
+                    newProject: { name: '', balance: 0 }
+                }
+            },
+            computed: {
+                isAdmin() {
+                    return this.currentUser && this.currentUser.role === 'ADMIN';
+                },
+                totalBalance() {
+                    return this.financeData.reduce((sum, d) => sum + (Number(d.income) || 0) - (Number(d.expense) || 0), 0)
+                }
+            },
+            watch: {
+                tasks: { 
+                    handler(v) { 
+                        v.forEach(task => saveToDB('tasks', task));
+                    }, 
+                    deep: true 
+                },
+                projects: { 
+                    handler(v) { 
+                        v.forEach(project => saveToDB('projects', project));
+                    }, 
+                    deep: true 
+                },
+                financeData: { 
+                    handler(v) { 
+                        saveToDB('finance', { id: 'financeData', data: v });
+                    }, 
+                    deep: true 
+                },
+                users: { 
+                    handler(v) { 
+                        v.forEach(user => saveToDB('users', user));
+                    }, 
+                    deep: true 
+                },
+                currentUser: { 
+                    handler(v) { 
+                        if(v) saveToDB('currentUser', { id: 'current', user: v });
+                    }, 
+                    deep: true 
+                },
+                currentTab() {
+                    nextTick(() => {
+                        lucide.createIcons();
+                        if (this.currentTab === 'tasks') this.initDragDrop();
+                    })
+                }
+            },
+            async mounted() {
+                await initDB();
+                await this.loadData();
+                nextTick(() => {
+                    lucide.createIcons();
+                    if (this.currentTab === 'tasks') this.initDragDrop();
+                });
+            },
+            methods: {
+                async loadData() {
+                    const tasks = await loadFromDB('tasks');
+                    this.tasks = tasks.length > 0 ? tasks : [];
+                    
+                    const projects = await loadFromDB('projects');
+                    this.projects = projects.length > 0 ? projects : [];
+                    
+                    const finance = await loadFromDB('finance');
+                    this.financeData = finance.length > 0 ? finance[0].data : Array.from({length: 31}, () => ({ income: 0, expense: 0, note: '' }));
+                    
+                    const users = await loadFromDB('users');
+                    this.users = users.length > 0 ? users : [
+                        {id: '1', name: 'ADMIN', role: 'ADMIN'},
+                        {id: '2', name: 'USER', role: 'USER'}
+                    ];
+                    
+                    const currentUserData = await loadFromDB('currentUser');
+                    if (currentUserData.length > 0) {
+                        this.currentUser = currentUserData[0].user;
+                    } else {
+                        this.currentUser = this.users[0];
+                    }
+                    this.selectedUserId = this.currentUser.id;
+                },
+                navClass(active) {
+                    return active ? 'text-gray-900 border-b-4 border-gray-800 pb-1' : 'text-gray-400 hover:text-gray-600 transition'
+                },
+                statusDot(status) {
+                    if (status === 'todo') return 'bg-red-500'
+                    if (status === 'doing') return 'bg-yellow-400'
+                    return 'bg-green-500'
+                },
+                getTasksByStatus(status) {
+                    return this.tasks.filter(t => t.status === status)
+                },
+                openTaskModal(status) {
+                    this.newTask = { title: '', description: '', status };
+                    this.showTaskModal = true;
+                    nextTick(() => lucide.createIcons());
+                },
+                saveTask() {
+                    if (!this.newTask.title.trim()) {
+                        alert('Введите название задачи');
+                        return;
+                    }
+                    const task = {
+                        ...this.newTask,
+                        id: Date.now().toString(),
+                        title: this.newTask.title.trim()
+                    };
+                    this.tasks.push(task);
+                    saveToDB('tasks', task);
+                    this.showTaskModal = false;
+                    this.newTask = { title: '', description: '', status: 'todo' };
+                    nextTick(() => lucide.createIcons());
+                },
+                deleteTask(id) {
+                    if (confirm('Удалить задачу?')) {
+                        this.tasks = this.tasks.filter(t => t.id !== id);
+                        deleteFromDB('tasks', id);
+                    }
+                },
+                saveProject() {
+                    if (!this.newProject.name.trim()) {
+                        alert('Введите название проекта');
+                        return;
+                    }
+                    const project = {
+                        ...this.newProject,
+                        id: Date.now().toString(),
+                        name: this.newProject.name.trim(),
+                        balance: this.newProject.balance || 0
+                    };
+                    this.projects.push(project);
+                    saveToDB('projects', project);
+                    this.showProjectModal = false;
+                    this.newProject = { name: '', balance: 0 };
+                    nextTick(() => lucide.createIcons());
+                },
+                deleteProject(id) {
+                    if (confirm('Удалить проект?')) {
+                        this.projects = this.projects.filter(p => p.id !== id);
+                        deleteFromDB('projects', id);
+                    }
+                },
+                checkAdminPass() {
+                    if (this.adminPassInput === this.correctPass) {
+                        this.adminAuth = true;
+                        this.adminPassInput = '';
+                        nextTick(() => lucide.createIcons());
+                    } else {
+                        alert("ACCESS DENIED");
+                    }
+                },
+                makeAdmin(userId) {
+                    const user = this.users.find(u => u.id === userId);
+                    if (user) {
+                        user.role = 'ADMIN';
+                        if (this.currentUser.id === userId) {
+                            this.currentUser.role = 'ADMIN';
+                        }
+                        saveToDB('users', user);
+                        alert(`${user.name} теперь ADMIN!`);
+                        nextTick(() => lucide.createIcons());
+                    }
+                },
+                switchUser() {
+                    const user = this.users.find(u => u.id === this.selectedUserId);
+                    if (user) {
+                        this.currentUser = { ...user };
+                        this.adminAuth = false;
+                        this.currentTab = 'tasks';
+                        alert(`Переключено на ${user.name} (${user.role})`);
+                        nextTick(() => lucide.createIcons());
+                    }
+                },
+                addUser() {
+                    const name = prompt("Введите имя пользователя:");
+                    if (name && name.trim()) {
+                        const isAdmin = confirm("Дать права ADMIN?");
+                        const user = { 
+                            id: Date.now().toString(), 
+                            name: name.trim(), 
+                            role: isAdmin ? 'ADMIN' : 'USER' 
+                        };
+                        this.users.push(user);
+                        saveToDB('users', user);
+                        nextTick(() => lucide.createIcons());
+                    }
+                },
+                deleteUser(id) {
+                    if (this.users.length <= 1) {
+                        alert("Нельзя удалить единственного пользователя");
+                        return;
+                    }
+                    if (confirm('Удалить пользователя?')) {
+                        this.users = this.users.filter(u => u.id !== id);
+                        deleteFromDB('users', id);
+                        if (this.currentUser.id === id) {
+                            this.currentUser = this.users[0];
+                        }
+                    }
+                },
+                initDragDrop() {
+                    const todoCol = this.$refs.todoCol;
+                    const doingCol = this.$refs.doingCol;
+                    const doneCol = this.$refs.doneCol;
+                    
+                    if (todoCol && todoCol[0]) {
+                        Sortable.create(todoCol[0], {
+                            group: { name: 'kanban', pull: true, revertClone: false },
+                            animation: 300,
+                            ghostClass: 'drag-ghost',
+                            onEnd: (evt) => this.handleDragEnd(evt)
+                        });
+                    }
+                    if (doingCol && doingCol[0]) {
+                        Sortable.create(doingCol[0], {
+                            group: { name: 'kanban', pull: true, revertClone: false },
+                            animation: 300,
+                            ghostClass: 'drag-ghost',
+                            onEnd: (evt) => this.handleDragEnd(evt)
+                        });
+                    }
+                    if (doneCol && doneCol[0]) {
+                        Sortable.create(doneCol[0], {
+                            group: { name: 'kanban', pull: false, revertClone: false },
+                            animation: 300,
+                            ghostClass: 'drag-ghost'
+                        });
+                    }
+                },
+                handleDragEnd(evt) {
+                    const taskId = evt.item.getAttribute('data-id');
+                    const newStatus = evt.to.getAttribute('data-status');
+                    if (taskId && newStatus) {
+                        const task = this.tasks.find(t => t.id === taskId);
+                        if (task && task.status !== newStatus) {
+                            task.status = newStatus;
+                            saveToDB('tasks', task);
+                            nextTick(() => lucide.createIcons());
+                        }
+                    }
+                },
+                downloadReport(type) {
+                    let content = `ОТЧЕТ ОТ ${new Date().toLocaleString()}\n========================================\n\n`;
+                    if (type === 'tasks') {
+                        content += `ВЫПОЛНЕННЫЕ ЗАДАЧИ:\n`;
+                        this.getTasksByStatus('done').forEach((t, i) => {
+                            content += `${i+1}. ${t.title}\n`;
+                            if (t.description) content += `   ${t.description}\n`;
+                        });
+                        if (this.getTasksByStatus('done').length === 0) content += `Нет выполненных задач\n`;
+                    } else {
+                        content += `ФИНАНСОВЫЙ ОТЧЕТ
