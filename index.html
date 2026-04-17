@@ -144,7 +144,7 @@
                             <h3 class="font-black uppercase text-2xl text-gray-800 mb-6 tracking-tighter">{{ project.name }}</h3>
                             <div class="bg-gray-50 p-6 rounded-[2rem] border border-gray-200 shadow-inner">
                                 <label class="text-[10px] font-black text-gray-400 uppercase block mb-2 tracking-[0.2em] italic">Баланс проекта (₽)</label>
-                                <input type="number" v-model.number="project.balance" class="w-full bg-transparent text-3xl font-mono font-black text-indigo-600 outline-none">
+                                <input type="number" v-model.number="project.balance" @input="saveToStorage" class="w-full bg-transparent text-3xl font-mono font-black text-indigo-600 outline-none">
                             </div>
                         </div>
                     </div>
@@ -169,9 +169,9 @@
                                 <tbody class="divide-y divide-gray-100 font-bold italic text-sm">
                                     <tr v-for="day in 31" :key="day" class="hover:bg-gray-50 transition">
                                         <td class="p-6 bg-gray-50 text-center font-black text-gray-300 border-r border-gray-100">{{ day }}</td>
-                                        <td class="p-6 text-green-600"><input type="number" v-model.number="financeData[day-1].income" class="w-full bg-transparent outline-none focus:bg-white p-2 rounded-xl transition" placeholder="0"></td>
-                                        <td class="p-6 text-red-500"><input type="number" v-model.number="financeData[day-1].expense" class="w-full bg-transparent outline-none focus:bg-white p-2 rounded-xl transition" placeholder="0"></td>
-                                        <td class="p-6"><input type="text" v-model="financeData[day-1].note" class="w-full bg-transparent outline-none text-gray-400" placeholder="..."></td>
+                                        <td class="p-6 text-green-600"><input type="number" v-model.number="financeData[day-1].income" @input="saveToStorage" class="w-full bg-transparent outline-none focus:bg-white p-2 rounded-xl transition" placeholder="0"></td>
+                                        <td class="p-6 text-red-500"><input type="number" v-model.number="financeData[day-1].expense" @input="saveToStorage" class="w-full bg-transparent outline-none focus:bg-white p-2 rounded-xl transition" placeholder="0"></td>
+                                        <td class="p-6"><input type="text" v-model="financeData[day-1].note" @input="saveToStorage" class="w-full bg-transparent outline-none text-gray-400" placeholder="..."></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -306,11 +306,36 @@
                 }
             },
             watch: {
-                tasks: { handler(v) { localStorage.setItem('tasks_data', JSON.stringify(v)) }, deep: true },
-                projects: { handler(v) { localStorage.setItem('projects_data', JSON.stringify(v)) }, deep: true },
-                financeData: { handler(v) { localStorage.setItem('finance_data', JSON.stringify(v)) }, deep: true },
-                users: { handler(v) { localStorage.setItem('users_data', JSON.stringify(v)) }, deep: true },
-                currentUser: { handler(v) { if(v) localStorage.setItem('current_user', JSON.stringify(v)) }, deep: true },
+                tasks: { 
+                    handler(v) { 
+                        this.saveToStorage();
+                    }, 
+                    deep: true 
+                },
+                projects: { 
+                    handler(v) { 
+                        this.saveToStorage();
+                    }, 
+                    deep: true 
+                },
+                financeData: { 
+                    handler(v) { 
+                        this.saveToStorage();
+                    }, 
+                    deep: true 
+                },
+                users: { 
+                    handler(v) { 
+                        this.saveToStorage();
+                    }, 
+                    deep: true 
+                },
+                currentUser: { 
+                    handler(v) { 
+                        if(v) this.saveToStorage();
+                    }, 
+                    deep: true 
+                },
                 currentTab() {
                     nextTick(() => {
                         lucide.createIcons();
@@ -326,6 +351,15 @@
                 });
             },
             methods: {
+                saveToStorage() {
+                    localStorage.setItem('tasks_data', JSON.stringify(this.tasks));
+                    localStorage.setItem('projects_data', JSON.stringify(this.projects));
+                    localStorage.setItem('finance_data', JSON.stringify(this.financeData));
+                    localStorage.setItem('users_data', JSON.stringify(this.users));
+                    if (this.currentUser) {
+                        localStorage.setItem('current_user', JSON.stringify(this.currentUser));
+                    }
+                },
                 loadData() {
                     this.tasks = JSON.parse(localStorage.getItem('tasks_data')) || [];
                     this.projects = JSON.parse(localStorage.getItem('projects_data')) || [];
@@ -368,6 +402,7 @@
                         id: Date.now().toString(),
                         title: this.newTask.title.trim()
                     });
+                    this.saveToStorage();
                     this.showTaskModal = false;
                     this.newTask = { title: '', description: '', status: 'todo' };
                     nextTick(() => lucide.createIcons());
@@ -375,6 +410,7 @@
                 deleteTask(id) {
                     if (confirm('Удалить задачу?')) {
                         this.tasks = this.tasks.filter(t => t.id !== id);
+                        this.saveToStorage();
                     }
                 },
                 saveProject() {
@@ -388,6 +424,7 @@
                         name: this.newProject.name.trim(),
                         balance: this.newProject.balance || 0
                     });
+                    this.saveToStorage();
                     this.showProjectModal = false;
                     this.newProject = { name: '', balance: 0 };
                     nextTick(() => lucide.createIcons());
@@ -395,6 +432,7 @@
                 deleteProject(id) {
                     if (confirm('Удалить проект?')) {
                         this.projects = this.projects.filter(p => p.id !== id);
+                        this.saveToStorage();
                     }
                 },
                 checkAdminPass() {
@@ -413,6 +451,7 @@
                         if (this.currentUser.id === userId) {
                             this.currentUser.role = 'ADMIN';
                         }
+                        this.saveToStorage();
                         alert(`${user.name} теперь ADMIN!`);
                         nextTick(() => lucide.createIcons());
                     }
@@ -421,6 +460,7 @@
                     const user = this.users.find(u => u.id === this.selectedUserId);
                     if (user) {
                         this.currentUser = { ...user };
+                        this.saveToStorage();
                         this.adminAuth = false;
                         this.currentTab = 'tasks';
                         alert(`Переключено на ${user.name} (${user.role})`);
@@ -432,6 +472,7 @@
                     if (name && name.trim()) {
                         const isAdmin = confirm("Дать права ADMIN?");
                         this.users.push({ id: Date.now(), name: name.trim(), role: isAdmin ? 'ADMIN' : 'USER' });
+                        this.saveToStorage();
                         nextTick(() => lucide.createIcons());
                     }
                 },
@@ -445,6 +486,7 @@
                         if (this.currentUser.id === id) {
                             this.currentUser = this.users[0];
                         }
+                        this.saveToStorage();
                     }
                 },
                 initDragDrop() {
@@ -483,6 +525,7 @@
                         const task = this.tasks.find(t => t.id === taskId);
                         if (task && task.status !== newStatus) {
                             task.status = newStatus;
+                            this.saveToStorage();
                             nextTick(() => lucide.createIcons());
                         }
                     }
