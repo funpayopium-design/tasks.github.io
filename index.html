@@ -16,10 +16,9 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            color: #2d3748;
         }
         
-        /* Auth Screen */
+        /* Auth Container */
         .auth-container {
             min-height: 100vh;
             display: flex;
@@ -30,23 +29,11 @@
         
         .auth-box {
             background: white;
-            border-radius: 20px;
+            border-radius: 16px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             padding: 40px;
             width: 100%;
-            max-width: 450px;
-            animation: slideUp 0.5s ease;
-        }
-        
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            max-width: 480px;
         }
         
         .auth-header {
@@ -57,7 +44,11 @@
         .auth-header h1 {
             font-size: 28px;
             color: #2d3748;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
         
         .auth-header p {
@@ -74,8 +65,8 @@
         .auth-tab {
             flex: 1;
             padding: 12px;
-            border: none;
-            background: #edf2f7;
+            border: 2px solid #e2e8f0;
+            background: white;
             color: #4a5568;
             border-radius: 10px;
             cursor: pointer;
@@ -87,6 +78,17 @@
         .auth-tab.active {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            border-color: transparent;
+        }
+        
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            text-align: center;
         }
         
         .form-group {
@@ -136,16 +138,6 @@
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
-        }
-        
-        .error-message {
-            background: #fed7d7;
-            color: #c53030;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            text-align: center;
         }
         
         /* Main App */
@@ -249,6 +241,7 @@
             font-weight: 700;
         }
         
+        /* Kanban */
         .kanban-board {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -344,6 +337,14 @@
             color: #667eea;
         }
         
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #718096;
+            font-size: 14px;
+        }
+        
+        /* Projects */
         .projects-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -371,6 +372,7 @@
             margin-bottom: 15px;
         }
         
+        /* Finances */
         .finance-table {
             background: white;
             border-radius: 16px;
@@ -422,7 +424,7 @@
             background: #f7fafc;
         }
         
-        /* Admin Panel */
+        /* Admin */
         .admin-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -458,10 +460,6 @@
             border-radius: 16px;
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        
-        .users-table th, .users-table td {
-            padding: 15px 20px;
         }
         
         .status-badge {
@@ -529,33 +527,10 @@
             color: #c53030;
         }
         
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
+        .sync-status {
+            font-size: 12px;
             color: #718096;
-        }
-        
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-        }
-        
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                height: auto;
-                padding: 15px 0;
-                gap: 15px;
-            }
-            
-            .nav-tabs {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-            
-            .kanban-board {
-                grid-template-columns: 1fr;
-            }
+            margin-left: 10px;
         }
     </style>
 </head>
@@ -647,6 +622,7 @@
                         <div class="user-badge">
                             {{ currentUser.name }} ({{ currentUser.role }})
                         </div>
+                        <span class="sync-status">{{ syncStatus }}</span>
                         <button class="btn-logout" @click="logout">
                             Выйти
                         </button>
@@ -675,6 +651,10 @@
                                 </button>
                             </div>
                             
+                            <div class="empty-state" v-if="getTasksCount(col.id) === 0">
+                                Нет задач
+                            </div>
+                            
                             <button class="btn-add" @click="addTask(col.id)" v-if="currentUser.role === 'ADMIN'">
                                 + Добавить задачу
                             </button>
@@ -687,7 +667,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                         <h2 class="section-title" style="margin: 0;">Активные проекты</h2>
                         <button class="btn-primary" style="width: auto; padding: 12px 24px;" @click="addProject" v-if="currentUser.role === 'ADMIN'">
-                            + Новый проект
+                            Новый проект
                         </button>
                     </div>
                     
@@ -702,9 +682,7 @@
                     </div>
                     
                     <div class="empty-state" v-else>
-                        <div class="empty-state-icon">📁</div>
-                        <h3>Нет активных проектов</h3>
-                        <p>Создайте первый проект для начала работы</p>
+                        Нет активных проектов
                     </div>
                 </div>
                 
@@ -713,7 +691,7 @@
                     <div class="finance-table">
                         <div class="finance-header">
                             <h3>Финансовый лог</h3>
-                            <div class="total-balance">{{ formatMoney(totalBalance) }} ₽</div>
+                            <div class="total-balance">Общая прибыль: {{ formatMoney(totalBalance) }} ₽</div>
                         </div>
                         <table>
                             <thead>
@@ -841,6 +819,7 @@
                 const authError = ref('');
                 const authLoading = ref(false);
                 const currentTab = ref('tasks');
+                const syncStatus = ref('');
                 
                 const loginForm = ref({ username: '', password: '' });
                 const registerForm = ref({ name: '', username: '', password: '' });
@@ -898,6 +877,7 @@
                         localStorage.setItem('auth_token', res.token);
                         loadData();
                         loadUsers();
+                        syncStatus.value = '✓ Подключено';
                     } else {
                         authError.value = res?.error || 'Ошибка входа';
                     }
@@ -917,6 +897,7 @@
                         localStorage.setItem('auth_token', res.token);
                         loadData();
                         loadUsers();
+                        syncStatus.value = '✓ Подключено';
                     } else {
                         authError.value = res?.error || 'Ошибка регистрации';
                     }
@@ -932,6 +913,7 @@
                     projects.value = [];
                     finances.value = [];
                     allUsers.value = [];
+                    syncStatus.value = '';
                 };
 
                 const loadData = async () => {
@@ -940,6 +922,7 @@
                         tasks.value = data.tasks || [];
                         projects.value = data.projects || [];
                         finances.value = data.finances || [];
+                        syncStatus.value = '✓ Синхронизировано';
                     }
                 };
 
@@ -953,11 +936,13 @@
                 };
 
                 const saveData = async () => {
+                    syncStatus.value = '💾 Сохранение...';
                     await api('POST', {
                         tasks: tasks.value,
                         projects: projects.value,
                         finances: finances.value
                     });
+                    syncStatus.value = '✓ Сохранено';
                 };
 
                 const getTasksByStatus = (status) => {
@@ -1106,6 +1091,7 @@
                                 isAuthenticated.value = true;
                                 loadData();
                                 loadUsers();
+                                syncStatus.value = '✓ Подключено';
                             } else {
                                 logout();
                             }
@@ -1119,7 +1105,7 @@
                                 loadUsers();
                             }
                         }
-                    }, 10000);
+                    }, 5000);
                 });
 
                 onUnmounted(() => {
@@ -1135,6 +1121,7 @@
                     registerForm,
                     currentTab,
                     currentUser,
+                    syncStatus,
                     columns,
                     currentMonth,
                     tasks,
