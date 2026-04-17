@@ -6,8 +6,6 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit(0);
 
-session_start();
-
 $dataFile = __DIR__ . '/data.json';
 $authFile = __DIR__ . '/auth.json';
 
@@ -65,16 +63,14 @@ function getCurrentUser() {
         
         foreach ($auth['sessions'] as $i => $s) {
             $sessionTime = strtotime($s['last_activity']);
-            $isExpired = ($now - $sessionTime) > 1800; // 30 минут
+            $isExpired = ($now - $sessionTime) > 1800;
             
             if ($s['token'] === $token && !$isExpired) {
-                // Обновляем last_activity
                 $auth['sessions'][$i]['last_activity'] = $currentTime;
                 saveAuth($auth);
                 
                 foreach ($auth['users'] as $u) {
                     if ($u['id'] === $s['user_id']) {
-                        // Обновляем last_activity пользователя
                         foreach ($auth['users'] as &$user) {
                             if ($user['id'] === $u['id']) {
                                 $user['last_activity'] = $currentTime;
@@ -98,7 +94,7 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $raw = file_get_contents('php://input');
 $input = json_decode($raw, true) ?: [];
 
-// Регистрация
+// РЕГИСТРАЦИЯ - ИСПРАВЛЕНО
 if ($action === 'register') {
     $auth = loadAuth();
     
@@ -106,15 +102,22 @@ if ($action === 'register') {
     foreach ($auth['users'] as $u) {
         if ($u['username'] === $input['username']) {
             http_response_code(409);
-            echo json_encode(['error' => 'Пользователь уже существует']);
+            echo json_encode(['error' => 'Пользователь с таким логином уже существует']);
             exit;
         }
     }
     
+    // Проверка имени
+    if (empty($input['name']) || empty($input['username']) || empty($input['password'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Все поля обязательны для заполнения']);
+        exit;
+    }
+    
     $newUser = [
         'id' => count($auth['users']) + 1,
-        'name' => $input['name'],
-        'username' => $input['username'],
+        'name' => trim($input['name']),
+        'username' => trim($input['username']),
         'password' => password_hash($input['password'], PASSWORD_DEFAULT),
         'role' => 'USER',
         'created_at' => date('Y-m-d H:i:s'),
@@ -145,7 +148,7 @@ if ($action === 'register') {
     exit;
 }
 
-// Вход
+// ВХОД
 if ($action === 'login') {
     $auth = loadAuth();
     $user = null;
@@ -185,7 +188,7 @@ if ($action === 'login') {
     exit;
 }
 
-// Выход
+// ВЫХОД
 if ($action === 'logout') {
     $auth = loadAuth();
     $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
@@ -199,7 +202,7 @@ if ($action === 'logout') {
     exit;
 }
 
-// Получение списка пользователей (только ADMIN)
+// ПОЛУЧЕНИЕ СПИСКА ПОЛЬЗОВАТЕЛЕЙ
 if ($action === 'getUsers') {
     $currentUser = getCurrentUser();
     if (!$currentUser || $currentUser['role'] !== 'ADMIN') {
@@ -213,7 +216,7 @@ if ($action === 'getUsers') {
     
     $usersWithStatus = array_map(function($u) use ($now) {
         $lastActivity = strtotime($u['last_activity']);
-        $isOnline = ($now - $lastActivity) < 300; // Онлайн если был активен последние 5 минут
+        $isOnline = ($now - $lastActivity) < 300;
         
         return [
             'id' => $u['id'],
@@ -230,7 +233,7 @@ if ($action === 'getUsers') {
     exit;
 }
 
-// Изменение роли пользователя (только ADMIN)
+// ИЗМЕНЕНИЕ РОЛИ
 if ($action === 'changeRole') {
     $currentUser = getCurrentUser();
     if (!$currentUser || $currentUser['role'] !== 'ADMIN') {
@@ -255,7 +258,7 @@ if ($action === 'changeRole') {
     exit;
 }
 
-// Удаление пользователя (только ADMIN)
+// УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
 if ($action === 'deleteUser') {
     $currentUser = getCurrentUser();
     if (!$currentUser || $currentUser['role'] !== 'ADMIN') {
@@ -267,20 +270,16 @@ if ($action === 'deleteUser') {
     $auth = loadAuth();
     $targetId = $input['user_id'];
     
-    // Нельзя удалить себя
     if ($targetId == $currentUser['id']) {
         http_response_code(400);
         echo json_encode(['error' => 'Нельзя удалить себя']);
         exit;
     }
     
-    $auth['users'] = array_filter($auth['users'], fn($u) => $u['id'] != $targetId);
-    $auth['users'] = array_values($auth['users']);
-    
-    // Удаляем сессии этого пользователя
+    $auth['users'] = array_values(array_filter($auth['users'], fn($u) => $u['id'] != $targetId));
     $auth['sessions'] = array_filter($auth['sessions'], fn($s) => $s['user_id'] != $targetId);
-    
     saveAuth($auth);
+    
     echo json_encode(['status' => 'ok']);
     exit;
 }
