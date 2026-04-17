@@ -6,7 +6,7 @@
   <title>Бизнес Управление</title>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <style>
-    :root { --bg: #f4f6f8; --card: #fff; --primary: #2563eb; --border: #e2e8f0; }
+    :root { --bg: #f4f6f8; --card: #fff; --primary: #2563eb; --danger: #dc2626; --border: #e2e8f0; }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #1e293b; }
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .kanban { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
@@ -15,79 +15,107 @@
     .card { background: #f8fafc; padding: 10px; margin-bottom: 8px; border-radius: 6px; border-left: 3px solid var(--primary); }
     .card h4 { margin: 0 0 4px; }
     .card p { margin: 0 0 8px; font-size: 13px; color: #475569; }
-    .btn { background: var(--primary); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .btn { background: var(--primary); color: #fff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
     .btn:hover { opacity: 0.9; }
     .btn-sm { padding: 4px 8px; font-size: 11px; }
+    .btn-danger { background: var(--danger); }
     .section { margin-top: 24px; background: var(--card); padding: 16px; border-radius: 8px; border: 1px solid var(--border); }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th, td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border); }
-    .input { padding: 6px; border: 1px solid var(--border); border-radius: 4px; width: 100%; box-sizing: border-box; }
-    .user-badge { background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
-    .sync-status { font-size: 12px; color: #64748b; margin-left: 10px; }
+    .input { padding: 8px; border: 1px solid var(--border); border-radius: 6px; width: 100%; box-sizing: border-box; }
+    .badge { padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+    .badge-admin { background: #dbeafe; color: #1e40af; }
+    .badge-user { background: #dcfce7; color: #166534; }
+    .sync { font-size: 12px; color: #64748b; margin-left: 10px; }
+
+    /* Экран входа */
+    .login-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .login-box { background: #fff; padding: 30px; border-radius: 12px; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    .login-box h2 { margin: 0 0 20px; text-align: center; }
+    .login-box .input { margin-bottom: 12px; }
+    .login-box .btn { width: 100%; }
+    .error-msg { color: var(--danger); font-size: 12px; text-align: center; margin-bottom: 10px; min-height: 18px; }
   </style>
 </head>
 <body>
   <div id="app">
-    <div class="header">
-      <h2>📊 Бизнес Управление</h2>
-      <div>
-        <span class="user-badge">{{ currentUser.name }} ({{ currentUser.role }})</span>
-        <span class="sync-status">{{ syncStatus }}</span>
+    <!-- Экран авторизации -->
+    <div class="login-overlay" v-if="!isAuth">
+      <div class="login-box">
+        <h2>🔐 Вход в систему</h2>
+        <div class="error-msg">{{ loginError }}</div>
+        <input v-model="form.username" class="input" placeholder="Логин" @keyup.enter="login">
+        <input v-model="form.password" type="password" class="input" placeholder="Пароль" @keyup.enter="login">
+        <button class="btn" @click="login" :disabled="loading">Войти</button>
       </div>
     </div>
 
-    <div class="kanban">
-      <div class="col" v-for="col in ['todo','doing','done']" :key="col">
-        <h3>{{ col === 'todo' ? 'В очереди' : col === 'doing' ? 'В работе' : 'Выполнено' }}</h3>
-        <div class="card" v-for="task in tasksByStatus[col]" :key="task.id">
-          <h4>{{ task.title }}</h4>
-          <p>{{ task.description || 'Нет описания' }}</p>
-          <button class="btn btn-sm" @click="changeStatus(task.id, col === 'done' ? 'todo' : 'done')">
-            {{ col === 'done' ? '↩ Вернуть' : '✅ Завершить' }}
-          </button>
+    <!-- Основной интерфейс -->
+    <template v-if="isAuth">
+      <div class="header">
+        <h2>📊 Бизнес Управление</h2>
+        <div>
+          <span :class="['badge', currentUser.role==='ADMIN'?'badge-admin':'badge-user']">
+            {{ currentUser.name }} ({{ currentUser.role }})
+          </span>
+          <span class="sync">{{ syncStatus }}</span>
+          <button class="btn btn-sm btn-danger" @click="logout" style="margin-left:8px;">Выйти</button>
         </div>
-        <button class="btn" @click="addTask(col)" style="width:100%; margin-top:8px;">+ Новая задача</button>
       </div>
-    </div>
 
-    <div class="section">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h3>📁 Активные проекты</h3>
-        <button class="btn" @click="createProject">Новый проект</button>
+      <div class="kanban">
+        <div class="col" v-for="col in ['todo','doing','done']" :key="col">
+          <h3>{{ col === 'todo' ? 'В очереди' : col === 'doing' ? 'В работе' : 'Выполнено' }}</h3>
+          <div class="card" v-for="task in tasksByStatus[col]" :key="task.id">
+            <h4>{{ task.title }}</h4>
+            <p>{{ task.description || 'Нет описания' }}</p>
+            <button class="btn btn-sm" @click="changeStatus(task.id, col === 'done' ? 'todo' : 'done')">
+              {{ col === 'done' ? '↩ Вернуть' : '✅ Завершить' }}
+            </button>
+          </div>
+          <button class="btn" @click="addTask(col)" style="width:100%; margin-top:8px;">+ Новая задача</button>
+        </div>
       </div>
-      <table v-if="projects.length">
-        <thead><tr><th>Название</th><th>Баланс (₽)</th><th>Действие</th></tr></thead>
-        <tbody>
-          <tr v-for="p in projects" :key="p.id">
-            <td>{{ p.name }}</td>
-            <td>{{ (p.balance || 0).toLocaleString() }}</td>
-            <td><button class="btn btn-sm" @click="addBalance(p.id)">+ Внести</button></td>
-          </tr>
-        </tbody>
-      </table>
-      <p v-else style="color:#64748b;">Нет активных проектов</p>
-    </div>
 
-    <div class="section">
-      <h3>💰 Финансовый лог</h3>
-      <p><strong>Общая прибыль:</strong> {{ totalBalance.toLocaleString() }} ₽</p>
-      <div style="display:flex; gap:8px; margin-bottom:10px;">
-        <input v-model="finForm.amount" type="number" class="input" placeholder="Сумма">
-        <input v-model="finForm.comment" class="input" placeholder="Комментарий">
-        <button class="btn" @click="addFinance">Добавить</button>
+      <div class="section">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3>📁 Активные проекты</h3>
+          <button class="btn" @click="createProject">Новый проект</button>
+        </div>
+        <table v-if="projects.length">
+          <thead><tr><th>Название</th><th>Баланс (₽)</th><th>Действие</th></tr></thead>
+          <tbody>
+            <tr v-for="p in projects" :key="p.id">
+              <td>{{ p.name }}</td>
+              <td>{{ (p.balance || 0).toLocaleString() }}</td>
+              <td><button class="btn btn-sm" @click="addBalance(p.id)">+ Внести</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-else style="color:#64748b;">Нет активных проектов</p>
       </div>
-      <table>
-        <thead><tr><th>Дата</th><th>Приход (+)</th><th>Расход (-)</th><th>Комментарий</th></tr></thead>
-        <tbody>
-          <tr v-for="f in finances.slice().reverse().slice(0, 10)" :key="f.id">
-            <td>{{ f.date }}</td>
-            <td style="color:green;">{{ f.amount > 0 ? '+' + f.amount : '-' }}</td>
-            <td style="color:red;">{{ f.amount < 0 ? '-' + Math.abs(f.amount) : '-' }}</td>
-            <td>{{ f.comment }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+
+      <div class="section">
+        <h3>💰 Финансовый лог</h3>
+        <p><strong>Общая прибыль:</strong> {{ totalBalance.toLocaleString() }} ₽</p>
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+          <input v-model="finForm.amount" type="number" class="input" placeholder="Сумма">
+          <input v-model="finForm.comment" class="input" placeholder="Комментарий">
+          <button class="btn" @click="addFinance">Добавить</button>
+        </div>
+        <table>
+          <thead><tr><th>Дата</th><th>Приход (+)</th><th>Расход (-)</th><th>Комментарий</th></tr></thead>
+          <tbody>
+            <tr v-for="f in finances.slice().reverse().slice(0, 10)" :key="f.id">
+              <td>{{ f.date }}</td>
+              <td style="color:green;">{{ f.amount > 0 ? '+' + f.amount : '-' }}</td>
+              <td style="color:red;">{{ f.amount < 0 ? '-' + Math.abs(f.amount) : '-' }}</td>
+              <td>{{ f.comment }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
   </div>
 
   <script>
@@ -95,106 +123,108 @@
 
     createApp({
       setup() {
-        const currentUser = ref({ name: 'Администратор', role: 'ADMIN' });
+        const token = ref(localStorage.getItem('auth_token') || null);
+        const currentUser = ref({ name: '', role: '' });
         const tasks = ref([]);
         const projects = ref([]);
         const finances = ref([]);
         const finForm = ref({ amount: '', comment: '' });
-        const syncStatus = ref('⏳ Загрузка...');
+        const syncStatus = ref('');
+        const loginError = ref('');
+        const loading = ref(false);
+        const form = ref({ username: '', password: '' });
         let pollInterval;
 
-        // 🔄 Загрузка данных из data.json
-        const loadData = async () => {
+        const isAuth = computed(() => !!token.value);
+
+        // Универсальный API-запрос с токеном
+        const api = async (method, body = null, action = '') => {
+          const url = `api.php${action ? '?action='+action : ''}`;
+          const headers = { 'Content-Type': 'application/json' };
+          if (token.value) headers['Authorization'] = `Bearer ${token.value}`;
+          
           try {
-            const res = await fetch('api.php');
-            if (!res.ok) throw new Error('Network error');
-            const data = await res.json();
+            const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : null });
+            if (res.status === 401) {
+              logout(); return null;
+            }
+            return await res.json();
+          } catch (e) {
+            syncStatus.value = '❌ Сеть'; return null;
+          }
+        };
+
+        const login = async () => {
+          loading.value = true; loginError.value = '';
+          const res = await api('POST', { username: form.value.username, password: form.value.password }, 'login');
+          loading.value = false;
+          if (res?.token) {
+            token.value = res.token;
+            currentUser.value = res.user;
+            localStorage.setItem('auth_token', res.token);
+            loadData();
+          } else {
+            loginError.value = res?.error || 'Ошибка входа';
+          }
+        };
+
+        const logout = async () => {
+          await api('POST', null, 'logout');
+          token.value = null; currentUser.value = {}; form.value = {};
+          localStorage.removeItem('auth_token');
+          tasks.value = []; projects.value = []; finances.value = [];
+        };
+
+        const loadData = async () => {
+          if (!isAuth.value) return;
+          const data = await api('GET');
+          if (data) {
             tasks.value = data.tasks || [];
             projects.value = data.projects || [];
             finances.value = data.finances || [];
-            syncStatus.value = '✅ Обновлено';
-          } catch (e) {
-            syncStatus.value = '❌ Ошибка синхронизации';
-            console.error(e);
+            syncStatus.value = '✅ Синхронизировано';
           }
         };
 
-        // 💾 Сохранение данных в data.json
         const saveData = async () => {
-          try {
-            const payload = { tasks: tasks.value, projects: projects.value, finances: finances.value };
-            const res = await fetch('api.php', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
-            syncStatus.value = res.ok ? '💾 Сохранено' : '❌ Ошибка сохранения';
-          } catch (e) {
-            syncStatus.value = '❌ Ошибка сети';
-          }
+          if (!isAuth.value) return;
+          syncStatus.value = '💾 Сохранение...';
+          await api('POST', { tasks: tasks.value, projects: projects.value, finances: finances.value });
+          syncStatus.value = '✅ Обновлено';
         };
 
-        // Автообновление каждые 4 секунды
         onMounted(() => {
-          loadData();
-          pollInterval = setInterval(loadData, 4000);
+          if (isAuth.value) {
+            // Попытка восстановить сессию
+            api('GET').then(d => {
+              if (d) { loadData(); currentUser.value = d._meta?.user || {}; }
+              else logout();
+            });
+          }
+          pollInterval = setInterval(loadData, 5000);
         });
         onUnmounted(() => clearInterval(pollInterval));
 
+        // Бизнес-логика (аналогично предыдущей версии)
         const tasksByStatus = computed(() => ({
           todo: tasks.value.filter(t => t.status === 'todo'),
           doing: tasks.value.filter(t => t.status === 'doing'),
           done: tasks.value.filter(t => t.status === 'done')
         }));
+        const totalBalance = computed(() => finances.value.reduce((s, f) => s + (f.amount||0), 0));
 
-        const totalBalance = computed(() => finances.value.reduce((sum, f) => sum + (f.amount || 0), 0));
-
-        const addTask = (status) => {
-          const title = prompt('Название задачи:');
-          if (!title?.trim()) return;
-          tasks.value.push({ id: Date.now(), title, description: '', status, createdBy: currentUser.value.name });
-          saveData();
-        };
-
-        const changeStatus = (id, newStatus) => {
-          const task = tasks.value.find(t => t.id === id);
-          if (task) task.status = newStatus;
-          saveData();
-        };
-
-        const createProject = () => {
-          const name = prompt('Название проекта:');
-          if (!name?.trim()) return;
-          projects.value.push({ id: Date.now(), name, balance: 0 });
-          saveData();
-        };
-
-        const addBalance = (id) => {
-          const amount = parseFloat(prompt('Внести сумму (₽):'));
-          if (isNaN(amount)) return;
-          const project = projects.value.find(p => p.id === id);
-          if (project) project.balance += amount;
-          saveData();
-        };
-
+        const addTask = (status) => { const t = prompt('Название задачи:'); if(t?.trim()) { tasks.value.push({id:Date.now(), title:t, status}); saveData(); } };
+        const changeStatus = (id, ns) => { const t = tasks.value.find(x=>x.id===id); if(t){t.status=ns; saveData();} };
+        const createProject = () => { const n = prompt('Название проекта:'); if(n?.trim()) { projects.value.push({id:Date.now(), name:n, balance:0}); saveData(); } };
+        const addBalance = (id) => { const a = parseFloat(prompt('Сумма (₽):')); if(!isNaN(a)) { const p=projects.value.find(x=>x.id===id); if(p){p.balance+=a; saveData();} } };
         const addFinance = () => {
-          const amount = parseFloat(finForm.value.amount);
-          if (isNaN(amount) || !amount) return alert('Введите корректную сумму');
-          finances.value.push({
-            id: Date.now(),
-            amount,
-            comment: finForm.value.comment || '-',
-            date: new Date().toISOString().split('T')[0]
-          });
-          finForm.value = { amount: '', comment: '' };
-          saveData();
+          const a = parseFloat(finForm.value.amount);
+          if(isNaN(a)||!a) return;
+          finances.value.push({id:Date.now(), amount:a, comment:finForm.value.comment||'-', date:new Date().toISOString().split('T')[0]});
+          finForm.value = {amount:'',comment:''}; saveData();
         };
 
-        return {
-          currentUser, tasks, tasksByStatus, projects, finances,
-          totalBalance, finForm, syncStatus,
-          addTask, changeStatus, createProject, addBalance, addFinance
-        };
+        return { isAuth, currentUser, tasks, tasksByStatus, projects, finances, totalBalance, finForm, syncStatus, loginError, loading, form, login, logout, addTask, changeStatus, createProject, addBalance, addFinance };
       }
     }).mount('#app');
   </script>
